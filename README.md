@@ -1,4 +1,5 @@
 # CREPaf
+<<<<<<< Updated upstream
 ## Sous-titre
 
 > test de bloc
@@ -8,3 +9,9 @@
 ```python
 for i = 1:n
 ```
+=======
+## Soustitre
+
+> fozeijfiojz fozejf 
+
+>>>>>>> Stashed changes
