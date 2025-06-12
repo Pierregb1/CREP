@@ -12,48 +12,47 @@
       background: linear-gradient(to bottom, #e0f7fa, #ffffff);
       color: #333;
     }
-
     header {
       background-color: #00796b;
       color: white;
       padding: 20px;
       text-align: center;
     }
-
     h1 {
       margin: 0;
       font-size: 2em;
     }
-
     main {
       padding: 40px 20px;
       max-width: 800px;
       margin: auto;
     }
-
-    .intro {
-      margin-bottom: 30px;
-    }
-
     .cta {
       text-align: center;
       margin-top: 40px;
     }
-
-    .cta a {
+    button {
       background-color: #00796b;
       color: white;
       padding: 15px 25px;
-      text-decoration: none;
+      border: none;
       border-radius: 10px;
       font-size: 1.2em;
-      transition: background 0.3s;
+      cursor: pointer;
     }
-
-    .cta a:hover {
+    button:hover {
       background-color: #004d40;
     }
-
+    input {
+      margin: 8px;
+      padding: 5px;
+      font-size: 1em;
+    }
+    #resultImg {
+      display: block;
+      margin: 40px auto;
+      max-width: 100%;
+    }
     footer {
       text-align: center;
       padding: 20px;
@@ -71,17 +70,35 @@
 
   <main>
     <section class="intro">
-      <h2>À propos du projet</h2>
-      <p>Ce site vous permet de simuler la température d'une surface terrestre en fonction de paramètres comme l’albédo, la capacité thermique, l’ensoleillement ou encore la latitude. Il s’appuie sur des modèles thermiques simples (loi de Newton, bilan radiatif) pour estimer l'évolution de la température au cours du temps.</p>
+      <h2>Entrez vos paramètres</h2>
+      <form id="simForm" onsubmit="runPython(); return false;">
+        <label>Latitude : <input type="number" step="0.01" id="lat" value="48.85" required></label><br>
+        <label>Longitude : <input type="number" step="0.01" id="lon" value="2.35" required></label><br>
+        <label>Jour de l’année (1–365) : <input type="number" id="jour" value="172" min="1" max="365" required></label><br><br>
+        <button type="submit">Lancer la simulation</button>
+      </form>
     </section>
 
     <section class="cta">
-      <a href="simulation.html">Lancer une simulation</a>
+      <img id="resultImg" style="display: none;" alt="Graphique de simulation thermique">
     </section>
   </main>
 
   <footer>
     © 2025 - Projet Simulation Température | Développé par Pierre Garcia
   </footer>
+
+  <script>
+    function runPython() {
+      const lat = document.getElementById("lat").value;
+      const lon = document.getElementById("lon").value;
+      const jour = document.getElementById("jour").value;
+
+      const url = `https://crep-online.onrender.com/run?lat=${lat}&lon=${lon}&jour=${jour}&t=${Date.now()}`;
+      const img = document.getElementById("resultImg");
+      img.src = url;
+      img.style.display = "block";
+    }
+  </script>
 </body>
 </html>
