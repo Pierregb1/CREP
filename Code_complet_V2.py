@@ -1,5 +1,5 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 def temp(P_recu):
 
@@ -81,7 +81,7 @@ def puissance_recue_par_heure(latitude_deg, longitude_deg, jour_de_l_annee):
 
     return puissances
 
-#pour simuler plusieur fois d'affiler le même jours
+#pour simuler plusieur fois d'affilée le même jour
 def liste(l):
     L = []
     for j in range(10):
@@ -93,9 +93,8 @@ def liste(l):
 def chaque_jour(lat,long):
 
     """
-    Prends les coordonnée d'un point en entrée et renvoie la puissance recue par ce point au cours d'une année sous forme de Liste de sous listes, les sous-listes correspondant à chaqu journées
+    Prends les coordonnée d'un point en entrée et renvoie la puissance recue par ce point au cours d'une année (sous forme de listes de sous-listes, les sous-listes correspondant à chaque journée)
     """
-
 
     P_tout_jour = [] #température de chaque journée
     for i in range(1,366):
@@ -106,7 +105,7 @@ def chaque_jour(lat,long):
 def annee(P_tout):
 
     """
-    Renvoie une liste de puissance heure par heure étalée sur une année
+    Renvoie une liste de puissance heure par heure, étalée sur une année
     """
 
     P = []
@@ -115,14 +114,10 @@ def annee(P_tout):
             P.append(P_tout[i][j])
     return(P)
 
-
-
-
 # Exemple : Paris, 48.85°N, 2.35°E, 21 juin (jour 172)
 P_paris = puissance_recue_par_heure(48.85, 2.35, 172)
 T_point = temp(annee(chaque_jour(48.85,2.35)))
 # Affichage
-import matplotlib.pyplot as plt
 plt.plot(range(len(T_point)), T_point)
 plt.xlabel("Heure")
 plt.ylabel("température point K")
