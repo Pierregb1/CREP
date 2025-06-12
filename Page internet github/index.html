@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation Température Terrestre</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+      color: #333;
+    }
+    header {
+      background-color: #00796b;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 2em;
+    }
+    main {
+      padding: 40px 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .cta {
+      text-align: center;
+      margin-top: 40px;
+    }
+    button {
+      background-color: #00796b;
+      color: white;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #004d40;
+    }
+    canvas {
+      display: block;
+      margin: 40px auto;
+      max-width: 100%;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.9em;
+      background-color: #f0f0f0;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Simulation de Température Terrestre</h1>
+    <p>Modélisez l'évolution thermique d'un point à la surface de la Terre</p>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h2>À propos du projet</h2>
+      <p>Ce site vous permet de simuler la température d'une surface terrestre selon un modèle thermique simplifié basé sur la loi de Newton du refroidissement.</p>
+    </section>
+
+    <section class="cta">
+      <button onclick="runSimulation()">Lancer une simulation</button>
+    </section>
+
+    <canvas id="chart" width="600" height="400"></canvas>
+  </main>
+
+  <footer>
+    © 2025 - Projet Simulation Température | Développé par Pierre Garcia
+  </footer>
+
+  <script>
+    function runSimulation() {
+      // Paramètres du modèle
+      const T0 = 100.0;
+      const T_lim = 20.0;
+      const N = 1000;
+      const dt = 0.01;
+      const c = 1.0;
+      const h = 0.1;
+      const S = 10.0;
+
+      let T = [T0];
+      let t = [0];
+
+      for (let i = 1; i < N; i++) {
+        t.push(t[i - 1] + dt);
+        T.push(T[i - 1] - dt * (T[i - 1] - T_lim) * h * S / c);
+      }
+
+      // Affichage avec Chart.js
+      const ctx = document.getElementById('chart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: t,
+          datasets: [{
+            label: 'Température (K)',
+            data: T,
+            borderColor: '#00796b',
+            fill: false,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              title: { display: true, text: 'Temps (s)' }
+            },
+            y: {
+              title: { display: true, text: 'Température (K)' }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
