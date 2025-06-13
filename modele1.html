@@ -7,7 +7,9 @@
 <body>
   <h1>Modèle 1 — Refroidissement</h1>
   <p>Ce modèle ne nécessite pas de latitude ou de longitude.</p>
-  <button onclick="afficherGraphique()">Afficher le graphique</button>
+  <form onsubmit="event.preventDefault(); afficherGraphique();">
+    <button type="submit">Afficher le graphique</button>
+  </form>
 
   <div id="graphique">
     <h3>Résultat :</h3>
