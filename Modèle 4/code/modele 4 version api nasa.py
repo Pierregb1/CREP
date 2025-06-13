@@ -91,13 +91,14 @@ def temp(P_recu, vitesses_vent_journalières, A):
     dt = 3600
     T_air = 283
     T = [T0]
+    alpha = 0.77
 
     for i in range(len(P_recu)):
         jour = i // 24
         v = vitesses_vent_journalières[jour]
         h = coefficient_convection(v)
         flux_entrant = (1 - A) * P_recu[i] * S
-        flux_sortant_rad = 0.5 * sigma * S * T[i]**4
+        flux_sortant_rad = (1-alpha/2) * sigma * S * T[i]**4
         flux_convection = h * S * (T[i] - T_air)
         dT = dt * (flux_entrant - flux_sortant_rad - flux_convection) / c
         T.append(T[i] + dT)
@@ -131,7 +132,7 @@ def annee(P_tout):
     return [val for jour in P_tout for val in jour]
 
 # ---------------------- Paramètres du point d’étude ---------------------- #
-lat, lon = 28.85, 2.35  # Paris
+lat, lon = 48.85, 2.35  # Paris
 P_annuelle = annee(chaque_jour(lat, lon))
 vent_journalier = get_daily_wind_speed(lat, lon)
 A = get_mean_albedo(lat, lon)
@@ -154,7 +155,7 @@ ax.xaxis.set_major_formatter(formatter)
 
 plt.xlabel("Date")
 plt.ylabel("Température (K)")
-plt.title(f"Température simulée à Paris ({lat}°N, {lon}°E) en 2024")
+plt.title(f"Température simulée pour un point de coordonnées ({lat}°N, {lon}°E)")
 plt.grid(True)
 plt.tight_layout()
 plt.show()
