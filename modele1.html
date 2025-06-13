@@ -6,18 +6,15 @@
   <style>
     #graphique-container {
       width: 100%;
-      overflow: hidden;
-      position: relative;
+      overflow: auto;
       border: 1px solid #ccc;
-      height: 600px;
+      height: auto;
     }
     #imageGraphique {
-      position: absolute;
-      top: 0;
-      left: 0;
-      transform-origin: top left;
-      cursor: grab;
-      max-width: none;
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: auto;
     }
   </style>
 </head>
@@ -34,7 +31,7 @@
   <div id="graphique">
     <h3>Résultat :</h3>
     <div id="graphique-container">
-      <img id="imageGraphique" src="https://crep-online.onrender.com/run?model=1&zoom=1" alt="Le graphique apparaîtra ici" />
+      <img id="imageGraphique" src="" alt="Le graphique apparaîtra ici" />
     </div>
   </div>
 
@@ -42,37 +39,19 @@
     function afficherGraphique() {
       const zoom = document.getElementById('zoom').value;
       const url = `https://crep-online.onrender.com/run?model=1&zoom=${zoom}&t=${Date.now()}`;
-      document.getElementById('imageGraphique').src = url;
+      const img = document.getElementById('imageGraphique');
+      img.src = url;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const img = document.getElementById('imageGraphique');
       const zoomInput = document.getElementById('zoom');
       const zoomVal = document.getElementById('zoom-val');
+      zoomVal.textContent = zoomInput.value;
+      afficherGraphique();
 
       zoomInput.addEventListener('input', () => {
         zoomVal.textContent = zoomInput.value;
         afficherGraphique();
-      });
-
-      let isDragging = false, startX, startY;
-
-      img.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startX = e.clientX - img.offsetLeft;
-        startY = e.clientY - img.offsetTop;
-        img.style.cursor = 'grabbing';
-      });
-
-      window.addEventListener('mouseup', () => {
-        isDragging = false;
-        img.style.cursor = 'grab';
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        img.style.left = `${e.clientX - startX}px`;
-        img.style.top = `${e.clientY - startY}px`;
       });
     });
   </script>
