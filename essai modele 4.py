@@ -29,28 +29,29 @@ def coefficient_convection(v):
     h = Nu * lambda_air / L
     return h
 
-# ---------------------- API Open-Meteo pour le vent ---------------------- #
-def vent_moyen_par_jour_reel(lat, lon, start="2024-01-01", end="2024-12-31"):
-    """
-    Appelle l’API Open-Meteo pour récupérer la vitesse moyenne du vent journalière (10 m).
-    """
-    url = "https://archive-api.open-meteo.com/v1/archive"
+# ---------------------- API Nasa pour le vent ---------------------- #
+def get_daily_wind_speed(lat, lon, start="20240101", end="20241231"):
+    url = "https://power.larc.nasa.gov/api/temporal/daily/point"
     params = {
-        "latitude": lat,
+        "parameters": "WS2M",
+        "community": "AG",
         "longitude": lon,
-        "start_date": start,
-        "end_date": end,
-        "daily": "windspeed_10m_max",
-        "timezone": "UTC"
+        "latitude": lat,
+        "start": start,
+        "end": end,
+        "format": "JSON"
     }
+
     try:
-        r = requests.get(url, params=params)
-        r.raise_for_status()
-        data = r.json()
-        return data["daily"]["windspeed_10m_max"]
+        response = requests.get(url, params=params)
+        data = response.json()
+        wind_data = data["properties"]["parameter"]["WS2M"]
+        wind_values = [wind_data[day] for day in sorted(wind_data)]
+        return wind_values  # Liste de 365 vitesses moyennes journalières
     except Exception as e:
-        print("Erreur API vent :", e)
-        return [4] * 365  # valeur par défaut
+        print("Erreur lors de la récupération du vent :", e)
+        return [2.5] * 365  # Valeur par défaut
+
 
 # ---------------------- API NASA POWER pour l’albédo ---------------------- #
 def get_mean_albedo(lat, lon, start="20220101", end="20231231"):
@@ -131,7 +132,7 @@ def annee(P_tout):
 # ---------------------- Paramètres du point d’étude ---------------------- #
 lat, lon = 48.85, 2.35  # Paris
 P_annuelle = annee(chaque_jour(lat, lon))
-vent_journalier = vent_moyen_par_jour_reel(lat, lon)
+vent_journalier = get_daily_wind_speed(lat, lon)
 A = get_mean_albedo(lat, lon)
 
 # Simulation température
