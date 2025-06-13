@@ -5,6 +5,7 @@ Created on Fri Jun 13 14:18:02 2025
 @author: jeann
 """
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
@@ -130,7 +131,7 @@ def annee(P_tout):
     return [val for jour in P_tout for val in jour]
 
 # ---------------------- Paramètres du point d’étude ---------------------- #
-lat, lon = 48.85, 2.35  # Paris
+lat, lon = 28.85, 2.35  # Paris
 P_annuelle = annee(chaque_jour(lat, lon))
 vent_journalier = get_daily_wind_speed(lat, lon)
 A = get_mean_albedo(lat, lon)
