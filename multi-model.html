@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation multi-modèles</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .model {
+      background: white;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 800px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+    }
+    button {
+      background-color: #0288d1;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #026aa7;
+    }
+    img {
+      display: block;
+      margin: 20px auto;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌍 Simulation multi-modèles de température terrestre</h1>
+
+  <!-- Modèle 1 local uniquement -->
+  <div class="model">
+    <h2>Modèle 1 – Refroidissement Newtonien</h2>
+    <p>Ce modèle est exécuté localement avec JavaScript (modèle simplifié).</p>
+    <button onclick="runModel1()">Afficher le graphique</button>
+    <canvas id="canvas1" width="800" height="400"></canvas>
+  </div>
+
+  <!-- Modèles hébergés sur Render -->
+  <div class="model">
+    <h2>Modèle 2</h2>
+    <label>Latitude : <input id="lat2" type="number" value="48.85"></label>
+    <label>Longitude : <input id="lon2" type="number" value="2.35"></label><br>
+    <button onclick="runModel(2)">Simuler</button>
+    <img id="img2" style="display: none;">
+  </div>
+
+  <div class="model">
+    <h2>Modèle 3</h2>
+    <label>Latitude : <input id="lat3" type="number" value="48.85"></label>
+    <label>Longitude : <input id="lon3" type="number" value="2.35"></label><br>
+    <button onclick="runModel(3)">Simuler</button>
+    <img id="img3" style="display: none;">
+  </div>
+
+  <div class="model">
+    <h2>Modèle 4</h2>
+    <label>Latitude : <input id="lat4" type="number" value="48.85"></label>
+    <label>Longitude : <input id="lon4" type="number" value="2.35"></label><br>
+    <button onclick="runModel(4)">Simuler</button>
+    <img id="img4" style="display: none;">
+  </div>
+
+  <script>
+    function runModel(modelNum) {
+      const lat = document.getElementById("lat" + modelNum).value;
+      const lon = document.getElementById("lon" + modelNum).value;
+      const url = `https://crep-modele${modelNum}.onrender.com/run?lat=${lat}&lon=${lon}&t=${Date.now()}`;
+      const img = document.getElementById("img" + modelNum);
+      img.src = url;
+      img.style.display = "block";
+    }
+
+    function runModel1() {
+      const canvas = document.getElementById("canvas1");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Paramètres du modèle 1
+      let T0 = 100;
+      let T_lim = 20;
+      let c = 1.0;
+      let h = 0.1;
+      let S = 10.0;
+      let dt = 0.01;
+      let N = 1000;
+      let T = [T0];
+      let t = [0];
+
+      for (let i = 1; i < N; i++) {
+        t.push(t[i-1] + dt);
+        T.push(T[i-1] - dt * (T[i-1] - T_lim) * h * S / c);
+      }
+
+      // Tracé du graphique
+      ctx.beginPath();
+      ctx.moveTo(0, 400 - T[0]);
+      for (let i = 1; i < N; i++) {
+        let x = i * canvas.width / N;
+        let y = 400 - (T[i] - T_lim);
+        ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = "#00796b";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  </script>
+</body>
+</html>
