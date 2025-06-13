@@ -17,6 +17,7 @@
       left: 0;
       transform-origin: top left;
       cursor: grab;
+      max-width: none;
     }
   </style>
 </head>
@@ -33,20 +34,19 @@
   <div id="graphique">
     <h3>Résultat :</h3>
     <div id="graphique-container">
-      <img id="imageGraphique" src="" alt="Le graphique apparaîtra ici" />
+      <img id="imageGraphique" src="https://crep-online.onrender.com/run?model=1&zoom=1" alt="Le graphique apparaîtra ici" />
     </div>
   </div>
 
   <script>
     function afficherGraphique() {
       const zoom = document.getElementById('zoom').value;
-      const url = `https://crep-online.onrender.com/run?model=1&zoom=${zoom}`;
+      const url = `https://crep-online.onrender.com/run?model=1&zoom=${zoom}&t=${Date.now()}`;
       document.getElementById('imageGraphique').src = url;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       const img = document.getElementById('imageGraphique');
-      const container = document.getElementById('graphique-container');
       const zoomInput = document.getElementById('zoom');
       const zoomVal = document.getElementById('zoom-val');
 
@@ -55,7 +55,6 @@
         afficherGraphique();
       });
 
-      // Drag image
       let isDragging = false, startX, startY;
 
       img.addEventListener('mousedown', (e) => {
