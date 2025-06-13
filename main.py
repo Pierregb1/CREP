@@ -8,37 +8,34 @@ import math
 app = Flask(__name__)
 
 # =================== Modèle 1 =================== #
-@app.route("/run")
+app.route("/run")
 def run_model():
-    import matplotlib.pyplot as plt
-    import io
-    from flask import request, send_file
-
     model = request.args.get("model", "1")
-    zoomX = float(request.args.get("zoomX", 1))
+    zoomX = float(request.args.get("zoomX", 1.0))
 
     fig, ax = plt.subplots()
 
     if model == "1":
-        x = [0, 1, 2, 3, 4]
-        y = [0, 1, 0.5, 1.5, 1]
+        # On modifie l’échelle de temps : plus de points, mais sur une durée plus courte si zoomX > 1
+        time_max = 24 / zoomX  # 24h divisées par le facteur de zoom
+        x = np.linspace(0, time_max, 1000)
+        y = 273 + 10 * np.exp(-x / 5)
         ax.plot(x, y)
-        ax.set_title("Modèle 1 : Refroidissement")
 
-        # Applique un zoom sur l'axe des abscisses
-        x_center = (max(x) + min(x)) / 2
-        x_range = (max(x) - min(x)) / zoomX
-        ax.set_xlim(x_center - x_range / 2, x_center + x_range / 2)
+        ax.set_title("Modèle 1 : Refroidissement")
+        ax.set_xlabel("Temps (heures)")
+        ax.set_ylabel("Température (K)")
+        ax.grid(True)
 
     else:
-        ax.text(0.5, 0.5, "Modèle inconnu", ha='center', va='center')
+        ax.text(0.5, 0.5, f"Modèle {model} non pris en charge", ha='center', va='center')
+        ax.axis('off')
 
     buf = io.BytesIO()
-    fig.savefig(buf, format='png')
+    fig.savefig(buf, format='png', bbox_inches='tight')
     buf.seek(0)
     plt.close(fig)
     return send_file(buf, mimetype='image/png')
-
 # =================== Modèle 2 =================== #
 def run_model2(lat, lon):
     def puissance(lat, lon, jour):
