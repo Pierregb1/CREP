@@ -8,25 +8,36 @@ import math
 app = Flask(__name__)
 
 # =================== Modèle 1 =================== #
-def run_model1():
-    T0 = 100.0
-    T_lim = 20.0
-    N = 1000
-    dt = 0.01
-    c = 1.0
-    h = 0.1
-    S = 10.0
-    T = [T0]
-    t = [0]
-    for i in range(1, N):
-        t.append(t[i-1] + dt)
-        T.append(T[i-1] - dt * (T[i-1] - T_lim)*h *S/c)
+@app.route("/run")
+def run_model():
+    import matplotlib.pyplot as plt
+    import io
+    from flask import request, send_file
+
+    model = request.args.get("model", "1")
+    zoomX = float(request.args.get("zoomX", 1))
+
     fig, ax = plt.subplots()
-    ax.plot(t, T)
-    ax.set_title("Modèle 1 — Refroidissement")
-    ax.set_xlabel("Temps (h)")
-    ax.set_ylabel("Température (°C)")
-    return fig
+
+    if model == "1":
+        x = [0, 1, 2, 3, 4]
+        y = [0, 1, 0.5, 1.5, 1]
+        ax.plot(x, y)
+        ax.set_title("Modèle 1 : Refroidissement")
+
+        # Applique un zoom sur l'axe des abscisses
+        x_center = (max(x) + min(x)) / 2
+        x_range = (max(x) - min(x)) / zoomX
+        ax.set_xlim(x_center - x_range / 2, x_center + x_range / 2)
+
+    else:
+        ax.text(0.5, 0.5, "Modèle inconnu", ha='center', va='center')
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close(fig)
+    return send_file(buf, mimetype='image/png')
 
 # =================== Modèle 2 =================== #
 def run_model2(lat, lon):
