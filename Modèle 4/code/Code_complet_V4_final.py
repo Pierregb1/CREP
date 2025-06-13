@@ -4,12 +4,8 @@ import datetime
 import matplotlib.dates as mdates
 import requests
 
-
+# ---------------------- Convection par vitesse de vent ---------------------- #
 def coefficient_convection(v):
-    """
-    Calcule le coefficient de convection thermique (h) à partir de la vitesse du vent (v en m/s).
-    Retourne h en W/m²·K
-    """
     rho = 1.2         # Masse volumique de l'air (kg/m³)
     mu = 1.8e-5       # Viscosité dynamique de l'air (Pa·s)
     L = 1.0           # Longueur caractéristique (m)
@@ -17,32 +13,40 @@ def coefficient_convection(v):
     lambda_air = 0.026  # Conductivité thermique de l'air (W/m·K)
 
     Re = rho * v * L / mu
-
     if Re < 5e5:
-        C, m, n = 0.664, 0.5, 1/3  # Régime laminaire
+        C, m, n = 0.664, 0.5, 1/3
     else:
-        C, m, n = 0.037, 0.8, 1/3  # Régime turbulent
+        C, m, n = 0.037, 0.8, 1/3
 
     Nu = C * Re**m * Pr**n
     h = Nu * lambda_air / L
     return h
 
-def vent_moyen_par_jour(latitude_deg):
+# ---------------------- API Open-Meteo pour le vent ---------------------- #
+def vent_moyen_par_jour_reel(lat, lon, start="2024-01-01", end="2024-12-31"):
     """
-    Estimation journalière simplifiée de la vitesse moyenne du vent (m/s),
-    selon la latitude et la saison.
+    Appelle l’API Open-Meteo pour récupérer la vitesse moyenne du vent journalière (10 m).
     """
-    latitude_rad = np.radians(latitude_deg)
-    return [2 + 2.5 * np.cos(latitude_rad) + 1.5 * np.cos(2 * np.pi * (j - 81) / 365) for j in range(1, 366)]
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start,
+        "end_date": end,
+        "daily": "windspeed_10m_max",
+        "timezone": "UTC"
+    }
+    try:
+        r = requests.get(url, params=params)
+        r.raise_for_status()
+        data = r.json()
+        return data["daily"]["windspeed_10m_max"]
+    except Exception as e:
+        print("Erreur API vent :", e)
+        return [4] * 365  # valeur par défaut
 
-# Coordonnées Paris
-lat, lon = 48.85, 2.35
-
+# ---------------------- API NASA POWER pour l’albédo ---------------------- #
 def get_mean_albedo(lat, lon, start="20220101", end="20231231"):
-    """
-    Renvoie l'albédo moyen sur la période donnée pour un point donné (lat, lon).
-    start, end : dates au format 'YYYYMMDD'
-    """
     url = f"https://power.larc.nasa.gov/api/temporal/daily/point"
     params = {
         "parameters": "ALLSKY_SFC_SW_DWN,ALLSKY_SFC_SW_UP",
@@ -64,34 +68,21 @@ def get_mean_albedo(lat, lon, start="20220101", end="20231231"):
             upsky[day] / allsky[day]
             for day in allsky if allsky[day] > 0 and upsky[day] is not None
         ]
-        return sum(albedo_values) / len(albedo_values) if albedo_values else None
-
+        return sum(albedo_values) / len(albedo_values) if albedo_values else 0.3
     except Exception as e:
         print("Erreur lors de la récupération de l'albédo :", e)
-        return None
+        return 0.3
 
-start_date1 = "20220101"
-end_date1 = "20231231"
-
-def temp(P_recu, vitesses_vent_journalières):
-
-    """
-    renvoie une liste de température à partir d'une liste de puissance recue
-    entrée: Liste de puissances reçues au cours du temps
-    sortie: Liste de températures évaluées en fonction du temps
-
-    """
-
-    c = 2.25e5        # Capacité thermique (J/K) pour 0.1 m de sol humide
-    alpha = 0           # Coefficient effet de serre (inutile ici)
-    S = 1               # Surface (m²)
-    T0 = 283            # Température initiale en K (≈10°C)
-    sigma = 5.67e-8     # Constante de Stefan-Boltzmann
-    dt = 3600           # Pas de temps en secondes (1h)
-    A = get_mean_albedo(lat,lon)             # Albédo de la surface considérée (utiliser les modèle de l'année dernière pour déterminer alpha)
-    h = 10              # Coefficient de transfert thermique vers l'air (W/m²·K)
-    T_air = 283         # Température de l'air "ambiante" de référence (K)
+# ---------------------- Simulation Température ---------------------- #
+def temp(P_recu, vitesses_vent_journalières, A):
+    c = 2.25e5
+    S = 1
+    T0 = 283
+    sigma = 5.67e-8
+    dt = 3600
+    T_air = 283
     T = [T0]
+
     for i in range(len(P_recu)):
         jour = i // 24
         v = vitesses_vent_journalières[jour]
@@ -103,92 +94,49 @@ def temp(P_recu, vitesses_vent_journalières):
         T.append(T[i] + dT)
     return T
 
+# ---------------------- Modèle Solaire ---------------------- #
 def puissance_recue_par_heure(latitude_deg, longitude_deg, jour_de_l_annee):
-
-    """
-    Calcule la puissance reçue du Soleil heure par heure pour un point donné de la Terre.
-
-    Entrées :
-        - latitude_deg : latitude géographique en degrés (Nord positif)
-        - longitude_deg : longitude en degrés (Est positif)
-        - jour_de_l_annee : entier entre 1 et 365
-
-    Sortie :
-        - liste de 24 valeurs (en W/m²) correspondant à la puissance solaire reçue chaque heure
-    """
-    # Constante solaire (en W/m²), correspondant à la puissance totale émise par le soleil divisé par 4*pi*dTS**2 avec dTS distance Terre-Soleil
     S0 = 1361
-
-    # Conversion angles
     lat = np.radians(latitude_deg)
     lon = np.radians(longitude_deg)
-
-    # Inclinaison de l’axe terrestre
     inclinaison = np.radians(23.5)
-
-    # Calcul de la déclinaison solaire (δ), approximation type NOAA
-    # δ varie entre -23.5° et +23.5°
     declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * np.pi * (jour_de_l_annee - 81) / 365))
-
-    # Vecteur direction du Soleil dans le repère terrestre à midi (z nord, x équateur)
-    # Supposé dans le plan (x, z)
-
-    soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)]) # projection équatoriale # composante nord-sud
-
+    soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
     soleil /= np.linalg.norm(soleil)
-
     puissances = []
 
     for h in range(24):
-        # Angle horaire de la Terre : 0° à midi local, -180° à 0h, +180° à 23h
-        # Terme "rotation journalière" par rapport au méridien local
-
-        angle_terre = np.radians(15 * (h - 12))# 15° par heure
-
-        # Position du point à la surface de la Terre (coord. sphériques -> cartésiennes)
+        angle_terre = np.radians(15 * (h - 12))
         x = np.cos(lat) * np.cos(lon + angle_terre)
         y = np.cos(lat) * np.sin(lon + angle_terre)
         z = np.sin(lat)
-
         normale = np.array([x, y, z])
-
-        # Produit scalaire entre normale locale et direction du Soleil
         prod = np.dot(normale, soleil)
         puissances.append(max(0, S0 * prod))
     return puissances
 
-
-def chaque_jour(lat, long):
-
-    """
-    Prends les coordonnée d'un point en entrée et renvoie la puissance recue par ce point au cours d'une année sous forme de Liste de sous listes, les sous-listes correspondant à chaqu journées
-    """
-
-    return [puissance_recue_par_heure(lat, long, j) for j in range(1, 366)]
+def chaque_jour(lat, lon):
+    return [puissance_recue_par_heure(lat, lon, j) for j in range(1, 366)]
 
 def annee(P_tout):
-
-    """
-    Renvoie une liste de puissance heure par heure étalée sur une année
-    """
-
     return [val for jour in P_tout for val in jour]
 
-
+# ---------------------- Paramètres du point d’étude ---------------------- #
+lat, lon = 48.85, 2.35  # Paris
 P_annuelle = annee(chaque_jour(lat, lon))
-vent_journalier = vent_moyen_par_jour(lat)
-# Simulation de température
-T_point = temp(P_annuelle, vent_journalier)
+vent_journalier = vent_moyen_par_jour_reel(lat, lon)
+A = get_mean_albedo(lat, lon)
 
-# Dates : 8760 points (1 par heure sur 365 jours)
+# Simulation température
+T_point = temp(P_annuelle, vent_journalier, A)
+
+# ---------------------- Affichage ---------------------- #
 date_debut = datetime.datetime(2024, 1, 1)
 dates = [date_debut + datetime.timedelta(hours=i) for i in range(len(T_point))]
 
-# Affichage
 fig, ax = plt.subplots(figsize=(14, 6))
 ax.plot(dates, T_point)
 
-# Localisateur et formateur automatiques pour zoom intelligent
 locator = mdates.AutoDateLocator()
 formatter = mdates.ConciseDateFormatter(locator)
 
@@ -197,7 +145,7 @@ ax.xaxis.set_major_formatter(formatter)
 
 plt.xlabel("Date")
 plt.ylabel("Température (K)")
-plt.title("Température au cours de l'année au point de latitude " + str(lat) + " et de longitude " + str(lon))
+plt.title(f"Température simulée à Paris ({lat}°N, {lon}°E) en 2024")
 plt.grid(True)
 plt.tight_layout()
 plt.show()
