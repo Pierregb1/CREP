@@ -7,12 +7,17 @@
 <body>
   <h1>Modèle 1 — Refroidissement</h1>
   <p>Ce modèle ne nécessite pas de latitude ou de longitude.</p>
-  <button onclick="ouvrirModele1()">Afficher le graphique</button>
+  <button onclick="afficherGraphique()">Afficher le graphique</button>
+
+  <div id="graphique">
+    <h3>Résultat :</h3>
+    <img id="imageGraphique" src="" alt="Le graphique apparaîtra ici" style="max-width: 100%; border: 1px solid #ccc;"/>
+  </div>
 
   <script>
-    function ouvrirModele1() {
+    function afficherGraphique() {
       const url = "https://crep-online.onrender.com/run?model=1";
-      window.open(url, '_blank');
+      document.getElementById('imageGraphique').src = url;
     }
   </script>
 </body>
