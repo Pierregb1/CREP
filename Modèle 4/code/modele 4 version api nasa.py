@@ -97,7 +97,7 @@ def temp(P_recu, vitesses_vent_journalières, A):
         jour = i // 24
         v = vitesses_vent_journalières[jour]
         h = coefficient_convection(v)
-        flux_entrant = (1 - A) * P_recu[i] * S
+        flux_entrant = (1 - A)*0.8 * P_recu[i] * S
         flux_sortant_rad = (1-alpha/2) * sigma * S * T[i]**4
         flux_convection = h * S * (T[i] - T_air)
         dT = dt * (flux_entrant - flux_sortant_rad - flux_convection) / c
