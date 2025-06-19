@@ -1,92 +1,70 @@
 
-from flask import Flask, request, send_file
+from flask import Flask, request, jsonify
+import numpy as np, datetime, math, importlib.util, importlib, matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
-import io
-import datetime
-import math
+
+# Paths to user model files
+FILE_MODEL2 = "Code_complet_V2.py"
+FILE_MODEL3 = "Code_complet_V3_1.py"
+FILE_MODEL4 = "modele 4 version api nasa.py"
 
 app = Flask(__name__)
 
-def create_plot(x, y, title, xlabel, ylabel):
-    fig, ax = plt.subplots()
-    ax.plot(x, y)
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.grid(True)
-    return fig
+def simulate_model1(days):
+    hours_total = 24
+    x = np.linspace(0, hours_total, 1000)
+    y = 273 + 10*np.exp(-x/5)
+    if days<=1:
+        # scale hours to proportion of day
+        length = int(1000*days/hours_total)
+        x = x[:length]
+        y = y[:length]
+    return x.tolist(), y.tolist()
 
-def compute_temperature_series(lat, lon, heat_capacity):
-    S0 = 1361
-    lat_r = math.radians(lat)
-    lon_r = math.radians(lon)
-    incl = math.radians(23.5)
-    sigma = 5.67e-8
-    A = 0.3
-    dt = 3600  # 1 h
+def load_module_from_file(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    # fermer toutes figures éventuelles créées à l'import
+    plt.close('all')
+    return mod
 
-    def daily_power(jour):
-        decl = math.asin(math.sin(incl) * math.sin(2 * math.pi * (jour - 81) / 365))
-        sun_vec = np.array([math.cos(decl), 0, math.sin(decl)])
-        sun_vec /= np.linalg.norm(sun_vec)
-        powers = []
-        for h in range(24):
-            angle = math.radians(15 * (h - 12))
-            x = math.cos(lat_r) * math.cos(lon_r + angle)
-            y = math.cos(lat_r) * math.sin(lon_r + angle)
-            z = math.sin(lat_r)
-            nrm = np.array([x, y, z])
-            powers.append(max(0, S0 * np.dot(nrm, sun_vec)))
-        return powers
+def simulate_with_user_module(path, lat, lon, days):
+    mod = load_module_from_file(path, f"mod_{hash(path)}")
+    P = mod.annee(mod.chaque_jour(lat, lon))
+    # Tronquer P à days*24 points
+    n_points = min(len(P), days*24)
+    P = P[:n_points]
+    T = mod.temp(P)
+    # Dates
+    dates = [datetime.datetime(2024,1,1)+datetime.timedelta(hours=i) for i in range(len(T))]
+    dates = dates[:n_points]
+    return [d.isoformat() for d in dates], T[:n_points]
 
-    P = [p for j in range(1, 366) for p in daily_power(j)]
-    T = [273]
-    for p in P:
-        flux_out = 0.5 * sigma * (T[-1] ** 4)
-        T.append(T[-1] + dt * ((1 - A) * p - flux_out) / heat_capacity)
-    times = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    return times, T
+@app.route("/data")
+def data():
+    model = int(request.args.get("model",1))
+    lat   = float(request.args.get("lat", 48.85))
+    lon   = float(request.args.get("lon", 2.35))
+    days  = int(request.args.get("days",365))
+    days = max(1, min(days, 365)) # clamp
 
-@app.route("/run")
-def run():
-    model = int(request.args.get("model", 1))
-    lat = float(request.args.get("lat", 48.85))
-    lon = float(request.args.get("lon", 2.35))
-    window_days = int(request.args.get("days", 365))
-
-    if model == 1:
-        hours = np.linspace(0, 24, 1000)
-        temp = 273 + 10 * np.exp(-hours / 5)
-        if window_days == 1:
-            x = hours[:int(1000 * 1 / 24)]
-            y = temp[:int(1000 * 1 / 24)]
-        elif window_days == 30:
-            x = hours[:int(1000 * 12 / 24)]
-            y = temp[:int(1000 * 12 / 24)]
-        else:
-            x = hours
-            y = temp
-        fig = create_plot(x, y, "Modèle 1 : Refroidissement", "Temps (h)", "T (K)")
-
-    elif model in [2, 3, 4]:
-        heat_capacity = {2: 2.25e5, 3: 1.5e5, 4: 3e5}[model]
-        x, y = compute_temperature_series(lat, lon, heat_capacity)
-        n = len(x)
-        points_per_day = 24
-        window_points = min(int(window_days * points_per_day), len(x))
-        x = x[:window_points]
-        y = y[:window_points]
-        fig = create_plot(x, y, f"Modèle {model} — {window_days} jours", "Temps", "T (K)")
-
+    if model==1:
+        x,y = simulate_model1(days)
+    elif model==2:
+        x,y = simulate_with_user_module(FILE_MODEL2, lat, lon, days)
+    elif model==3:
+        x,y = simulate_with_user_module(FILE_MODEL3, lat, lon, days)
+    elif model==4:
+        try:
+            x,y = simulate_with_user_module(FILE_MODEL4, lat, lon, days)
+        except Exception as e:
+            return jsonify({'error':'Model 4 failed','details':str(e)}),500
     else:
-        return "Modèle inconnu", 400
+        return jsonify({'error':'Model not found'}),404
 
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close(fig)
-    return send_file(buf, mimetype='image/png')
+    return jsonify({'x':x,'y':y})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)

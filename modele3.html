@@ -1,40 +1,42 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 3 — Capacité thermique 1.5e5</title>
+  <title>Modèle 3</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-  <h1>Modèle 3 — Capacité thermique 1.5e5</h1>
-  <form onsubmit="event.preventDefault(); afficherGraphique();">
-    
-    <label for="lat">Latitude :</label>
-    <input type="number" id="lat" value="48.85" step="0.01"><br><br>
-    <label for="lon">Longitude :</label>
-    <input type="number" id="lon" value="2.35" step="0.01"><br><br>
-    
-    <label for="days">Durée :</label>
-    <select id="days">
-      <option value="1">1 jour</option>
-      <option value="30">30 jours</option>
-      <option value="365" selected>1 an</option>
-    </select><br><br>
-    <button onclick="afficherGraphique()">Afficher</button>
-  </form>
-
-  <div>
-    <img id="imageGraph" src="" style="max-width:100%; border: 1px solid #ccc;">
-  </div>
+  <h1>Modèle 3</h1>
+  <label>Latitude:</label><input type="number" id="lat" value="48.85" step="0.01"><label>Longitude:</label><input type="number" id="lon" value="2.35" step="0.01"><br><br>
+  <label for="days">Durée :</label>
+  <select id="days">
+    <option value="1">1 jour</option>
+    <option value="30">30 jours</option>
+    <option value="365" selected>1 an</option>
+  </select><br><br>
+  <button onclick="afficher()">Afficher</button>
+  <div id="chart" style="width:100%; height:500px;"></div>
 
   <script>
-    function afficherGraphique() {
-      const days = document.getElementById('days').value;
-      const lat = document.getElementById('lat').value; const lon = document.getElementById('lon').value;
-      const url = `https://crep-online.onrender.com/run?model=3&lat=${lat}&lon=${lon}&days=${days}&t=${Date.now()}`;
-      document.getElementById('imageGraph').src = url;
+    function afficher() {
+      const days = document.getElementById("days").value;
+      const lat = document.getElementById("lat").value; const lon = document.getElementById("lon").value;
+      const url = `/data?model=3&days=${days}&lat=${lat}&lon=${lon}`;
+      fetch(url).then(r => r.json()).then(d => {
+        Plotly.newPlot("chart", [{
+          x: d.x,
+          y: d.y,
+          mode: 'lines',
+          type: 'scatter'
+        }], {
+          title: "Modèle 3",
+          xaxis: { title: "Temps", rangeslider: {} },
+          yaxis: { title: "Température (K)" }
+        }, {responsive:true});
+      });
     }
-
-    document.addEventListener('DOMContentLoaded', afficherGraphique);
+    document.addEventListener('DOMContentLoaded', afficher);
   </script>
 </body>
 </html>
