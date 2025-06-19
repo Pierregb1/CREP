@@ -2,22 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 2 — Simulation annuelle (c=2.25e5)</title>
+  <title>Modèle 2 — Simulation annuelle (c = 2.25e5)</title>
 </head>
 <body>
-  <h1>Modèle 2 — Simulation annuelle (c=2.25e5)</h1>
+  <h1>Modèle 2 — Simulation annuelle (c = 2.25e5)</h1>
   <form onsubmit="event.preventDefault(); afficherGraphique();">
-    <label for="lat">Latitude :</label>
-    <input type="number" id="lat" step="0.01" value="48.85"><br><br>
-    <label for="lon">Longitude :</label>
-    <input type="number" id="lon" step="0.01" value="2.35"><br><br>
-
-    <label for="zoomX">Zoom (facteur) :</label>
-    <input type="range" id="zoomX" min="1" max="100" step="0.5" value="1">
-    <span id="zoom-val">1</span><br><br>
+    <label for='lat'>Latitude :</label><input type='number' id='lat' step='0.01' value='48.85'><br><br><label for='lon'>Longitude :</label><input type='number' id='lon' step='0.01' value='2.35'><br><br>
+    <label for="window">Fenêtre (jours) :</label>
+    <input type="range" id="window" min="1" max="365" step="1" value="365">
+    <span id="window-val">365</span><br><br>
 
     <label for="offset">Décalage (%) :</label>
-    <input type="range" id="offset" min="0" max="100" step="0.5" value="0">
+    <input type="range" id="offset" min="0" max="100" step="1" value="0">
     <span id="offset-val">0 %</span><br><br>
 
     <button type="submit">Afficher le graphique</button>
@@ -30,26 +26,25 @@
 
   <script>
     function afficherGraphique() {
-      const lat = document.getElementById('lat').value;
-      const lon = document.getElementById('lon').value;
-      const zoomX = document.getElementById('zoomX').value;
-      const offset = document.getElementById('offset').value / 100;  // conversion % -> fraction
-      const url = `https://crep-online.onrender.com/run?model=2&lat=${lat}&lon=${lon}&zoomX=${zoomX}&offset=${offset}&t=${Date.now()}`;
+      const lat = document.getElementById('lat').value; const lon = document.getElementById('lon').value;
+      const window_val = document.getElementById('window').value;
+      const offset_frac = document.getElementById('offset').value / 100;
+      const url = `https://crep-online.onrender.com/run?model=2&lat=\${lat}&lon=\${lon}&window=\${window_val}&offset=\${offset_frac}&t=\${Date.now()}`;
       document.getElementById('imageGraphique').src = url;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const zoomInput = document.getElementById('zoomX');
-      const zoomVal = document.getElementById('zoom-val');
+      const windowInput = document.getElementById('window');
+      const windowVal = document.getElementById('window-val');
       const offsetInput = document.getElementById('offset');
       const offsetVal = document.getElementById('offset-val');
 
       function update() {
-        zoomVal.textContent = zoomInput.value;
+        windowVal.textContent = windowInput.value;
         offsetVal.textContent = offsetInput.value + " %";
         afficherGraphique();
       }
-      zoomInput.addEventListener('input', update);
+      windowInput.addEventListener('input', update);
       offsetInput.addEventListener('input', update);
       update();
     });

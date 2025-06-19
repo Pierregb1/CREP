@@ -8,84 +8,96 @@ import math
 
 app = Flask(__name__)
 
-def generer_graphique_zoome(x, y, zoomX=1.0, offset=0.0, titre="Graphique", xlabel="Temps", ylabel="Valeur"):
-    """
-    zoomX : facteur de zoom (>1 = zoom avant)
-    offset : fraction entre 0 et 1 représentant le début de la fenêtre d'affichage
-    """
-    fig, ax = plt.subplots()
+def slice_series_by_days(x, y, window_days=365, offset_frac=0.0, points_per_day=24):
+    """Return a slice of the series covering `window_days` starting at the given offset fraction (0–1)."""
     n = len(x)
-    window = max(1, int(n / zoomX))
-    start_idx = int(offset * (n - window))
-    end_idx = start_idx + window
-    x_zoom = x[start_idx:end_idx]
-    y_zoom = y[start_idx:end_idx]
-    ax.plot(x_zoom, y_zoom)
-    ax.set_title(titre)
+    total_days = n / points_per_day
+    window_days = max(1, min(window_days, total_days))  # clamp
+    window_points = int(window_days * points_per_day)
+    max_start = n - window_points
+    start_idx = int(offset_frac * max_start)
+    end_idx = start_idx + window_points
+    return x[start_idx:end_idx], y[start_idx:end_idx]
+
+def create_plot(x, y, title, xlabel, ylabel):
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+    ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.grid(True)
     return fig
 
-def run_model1(zoomX=1.0, offset=0.0):
-    time_total = 24  # heures
-    n_points = 1000
-    x = np.linspace(0, time_total, n_points)
-    y = 273 + 10 * np.exp(-x / 5)
-    return generer_graphique_zoome(x, y, zoomX, offset, "Modèle 1 : Refroidissement", "Temps (heures)", "Température (K)")
+# ------------------- MODEL 1 ------------------- #
+def run_model1(window_hours=24, offset_frac=0.0):
+    hours = np.linspace(0, 24, 1000)
+    temp = 273 + 10 * np.exp(-hours / 5)
 
-def calc_model_temp(lat, lon, c):
-    def puissance(lat, lon, jour):
-        S0 = 1361
-        lat_r = math.radians(lat)
-        lon_r = math.radians(lon)
-        inclinaison = math.radians(23.5)
-        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
-        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
-        soleil /= np.linalg.norm(soleil)
-        puissances = []
+    # Convert hours to fraction of day for slicing
+    points_per_hour = len(hours) / 24
+    window_points = int(max(1, window_hours * points_per_hour))
+    max_start = len(hours) - window_points
+    start_idx = int(offset_frac * max_start)
+    end_idx = start_idx + window_points
+
+    x_slice = hours[start_idx:end_idx]
+    y_slice = temp[start_idx:end_idx]
+
+    return create_plot(x_slice, y_slice, "Modèle 1 : Refroidissement", "Temps (heures)", "Température (K)")
+
+# Utility to compute temperatures (shared)
+def compute_temperature_series(lat, lon, heat_capacity):
+    S0 = 1361
+    lat_r = math.radians(lat)
+    lon_r = math.radians(lon)
+    incl = math.radians(23.5)
+    sigma = 5.67e-8
+    A = 0.3
+    dt = 3600  # 1 h
+
+    def daily_power(jour):
+        decl = math.asin(math.sin(incl) * math.sin(2 * math.pi * (jour - 81) / 365))
+        sun_vec = np.array([math.cos(decl), 0, math.sin(decl)])
+        sun_vec /= np.linalg.norm(sun_vec)
+        powers = []
         for h in range(24):
             angle = math.radians(15 * (h - 12))
-            x = np.cos(lat_r) * np.cos(lon_r + angle)
-            y = np.cos(lat_r) * np.sin(lon_r + angle)
-            z = np.sin(lat_r)
-            normale = np.array([x, y, z])
-            puissances.append(max(0, S0 * np.dot(normale, soleil)))
-        return puissances
+            x = math.cos(lat_r) * math.cos(lon_r + angle)
+            y = math.cos(lat_r) * math.sin(lon_r + angle)
+            z = math.sin(lat_r)
+            nrm = np.array([x, y, z])
+            powers.append(max(0, S0 * np.dot(nrm, sun_vec)))
+        return powers
 
-    P = [val for jour in (puissance(lat, lon, j) for j in range(1, 366)) for val in jour]
-    S = 1
-    T0 = 273
-    sigma = 5.67e-8
-    dt = 3600
-    A = 0.3
-    T = [T0]
-    for i in range(len(P)):
-        flux_sortant = 0.5 * sigma * S * (T[i])**4
-        T.append(T[i] + dt * ((1 - A) * P[i] * S - flux_sortant) / c)
-    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    return dates, T
+    P = [p for j in range(1, 366) for p in daily_power(j)]
+    T = [273]
+    for p in P:
+        flux_out = 0.5 * sigma * (T[-1] ** 4)
+        T.append(T[-1] + dt * ((1 - A) * p - flux_out) / heat_capacity)
+    times = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
+    return times, T
 
-def run_model_generic(lat, lon, c, zoomX=1.0, offset=0.0, titre="Modèle"):
-    dates, T = calc_model_temp(lat, lon, c)
-    return generer_graphique_zoome(dates, T, zoomX, offset, titre, "Temps", "Température (K)")
+def run_model_generic(lat, lon, c, window_days=365, offset_frac=0.0, title="Modèle"):
+    x, y = compute_temperature_series(lat, lon, c)
+    x_slice, y_slice = slice_series_by_days(x, y, window_days, offset_frac, 24)
+    return create_plot(x_slice, y_slice, title, "Temps", "Température (K)")
 
 @app.route("/run")
 def run():
     model = int(request.args.get("model", 1))
     lat = float(request.args.get("lat", 48.85))
     lon = float(request.args.get("lon", 2.35))
-    zoomX = float(request.args.get("zoomX", 1.0))
-    offset = float(request.args.get("offset", 0.0))
+    window = float(request.args.get("window", 365))  # days for models 2-4, hours for model1
+    offset = float(request.args.get("offset", 0.0))  # fraction 0–1
 
     if model == 1:
-        fig = run_model1(zoomX, offset)
+        fig = run_model1(window_hours=min(max(window, 1), 24), offset_frac=offset)
     elif model == 2:
-        fig = run_model_generic(lat, lon, 2.25e5, zoomX, offset, "Modèle 2 — Température annuelle (c=2.25e5)")
+        fig = run_model_generic(lat, lon, 2.25e5, window, offset, "Modèle 2 — Température annuelle (c = 2.25e5)")
     elif model == 3:
-        fig = run_model_generic(lat, lon, 1.5e5, zoomX, offset, "Modèle 3 — Température annuelle (c=1.5e5)")
+        fig = run_model_generic(lat, lon, 1.5e5, window, offset, "Modèle 3 — Température annuelle (c = 1.5e5)")
     elif model == 4:
-        fig = run_model_generic(lat, lon, 3e5, zoomX, offset, "Modèle 4 — Température annuelle (c=3e5)")
+        fig = run_model_generic(lat, lon, 3e5, window, offset, "Modèle 4 — Température annuelle (c = 3e5)")
     else:
         return "Modèle inconnu", 400
 
