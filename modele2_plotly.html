@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Modèle 2 — Plotly Interactif</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <h1>Modèle 2 — Température annuelle (interactif)</h1>
+  <form onsubmit="event.preventDefault(); afficherGraphique();">
+    <label for="lat">Latitude :</label>
+    <input type="number" id="lat" name="lat" step="0.01" value="48.85"><br><br>
+    <label for="lon">Longitude :</label>
+    <input type="number" id="lon" name="lon" step="0.01" value="2.35"><br><br>
+    <button type="submit">Afficher le graphique interactif</button>
+  </form>
+
+  <div id="graphique" style="height:600px;"></div>
+
+  <script>
+    function afficherGraphique() {
+      const lat = document.getElementById('lat').value;
+      const lon = document.getElementById('lon').value;
+      const url = `https://crep-online.onrender.com/data_model2?lat=${lat}&lon=${lon}`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          Plotly.newPlot("graphique", [{
+            x: data.x,
+            y: data.y,
+            mode: 'lines',
+            name: 'Température'
+          }], {
+            title: "Température annuelle simulée",
+            xaxis: { title: "Temps", rangeslider: {visible: true} },
+            yaxis: { title: "Température (K)" }
+          });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', afficherGraphique);
+  </script>
+</body>
+</html>
