@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: crep-online
+    name: crep-png
     env: python
     plan: free
     region: frankfurt

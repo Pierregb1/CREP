@@ -2,81 +2,49 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 4 — Simulation annuelle</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.0"></script>
-  <style>canvas{max-width:100%;border:1px solid #ccc;}</style>
+  <title>Modèle 4 — Image PNG zoomable</title>
+  <style>
+    #graphique-container {
+      overflow-x: auto;
+      border: 1px solid #ccc;
+      white-space: nowrap;
+    }
+    #imageGraphique {
+      transition: transform 0.2s ease;
+      max-height: 500px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Modèle 4 — Simulation annuelle</h1>
+  <h1>Modèle 4 — Affichage PNG zoomable</h1>
   <div>
-    <label for="lat">Latitude :</label>
-    <input type="number" id="lat" step="0.01" value="48.85">
-    <label for="lon">Longitude :</label>
-    <input type="number" id="lon" step="0.01" value="2.35">
-
-    <button onclick='afficherGraphique()'>Afficher</button>
+    <label for="zoomX">Zoom abscisses :</label>
+    <input type="range" id="zoomX" min="1" max="10" step="0.1" value="1">
+    <span id="zoom-val">1.0</span>
+    <button onclick="afficherGraphique()">Recharger</button>
   </div>
-  <canvas id="graphiqueCanvas"></canvas>
+  <div id="graphique-container">
+    <img id="imageGraphique" src="" alt="Graphique" />
+  </div>
 
   <script>
-    const API_BASE = window.location.origin; // Pointage automatique vers l'API Flask
+    const image = document.getElementById("imageGraphique");
+    const zoomInput = document.getElementById("zoomX");
+    const zoomVal = document.getElementById("zoom-val");
 
-    let chart;
     function afficherGraphique() {
-      const params = new URLSearchParams({
-        model: 4,
-        lat: document.getElementById('lat').value,
-        lon: document.getElementById('lon').value
-      });
+      const lat = 48.85;
+      const lon = 2.35;
+      const zoomX = parseFloat(zoomInput.value).toFixed(1);
+      zoomVal.textContent = zoomX;
 
-
-      fetch(`${API_BASE}/data?` + params.toString())
-        .then(async response => {
-          if (!response.ok) {
-            const text = await response.text();
-            throw new Error('Status ' + response.status + ' — ' + text.slice(0,200));
-          }
-          return response.json();
-        })
-        .then(data => {
-          const ctx = document.getElementById('graphiqueCanvas').getContext('2d');
-          if (chart) chart.destroy();
-          chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: data.x,
-              datasets: [{
-                label: 'Température (K)',
-                data: data.y,
-                borderColor: n===1 ? 'blue' : 'green',
-                fill: false
-              }]
-            },
-            options: {
-              plugins: {
-                zoom: {
-                  zoom: {
-                    wheel: { enabled: true },
-                    pinch: { enabled: true },
-                    mode: 'x'
-                  },
-                  pan: { enabled: true, mode: 'x' }
-                }
-              },
-              scales: {
-                x: { title: { display: true, text: 'Temps' }, ticks: { maxRotation: 0 } },
-                y: { title: { display: true, text: 'Température (K)' } }
-              }
-            }
-          });
-        })
-        .catch(err => {
-          alert('Erreur lors de la récupération des données :' + err.message);
-          console.error(err);
-        });
+      let url = `/run?model=4&lat=${lat}&lon=${lon}&zoomX=${zoomX}&t=${Date.now()}`;
+      image.src = url;
+      image.style.transform = `scaleX(${zoomX})`;
     }
-    document.addEventListener('DOMContentLoaded', afficherGraphique);
+
+    zoomInput.addEventListener("input", afficherGraphique);
+    document.addEventListener("DOMContentLoaded", afficherGraphique);
   </script>
 </body>
 </html>
