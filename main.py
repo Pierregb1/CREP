@@ -1,83 +1,134 @@
+
 from flask import Flask, request, send_file
-import io
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import datetime, timedelta
-from flask_cors import CORS
+import datetime, math, io
 
 app = Flask(__name__)
-CORS(app)
 
-# Génération de dates
+# ---------- Outils communs ----------
+S0 = 1361                        # Constante solaire
+INCLINAISON = math.radians(23.5)
+SIGMA = 5.67e-8
 
-def generate_dates(period='year'):
-    today = datetime.today()
-    if period == 'year':
-        start = today - timedelta(days=365)
-    elif period == 'month':
-        start = today - timedelta(days=30)
-    elif period == 'day':
-        start = today - timedelta(days=1)
-    dates = [start + i * (today - start) / 100 for i in range(101)]
-    return dates
+# -- Modèle 1 : refroidissement exponentiel simple
+def modele1_series():
+    t_h = np.linspace(0, 24, 1000)
+    T   = 273 + 10 * np.exp(-t_h / 5)
+    return t_h, T
 
-# Fonctions de simulation pour chaque modèle
+# -- Outils pour les modèles 2‑3‑4 (simulation annuelle avec différentes capacités)
+def puissance_jour(lat, lon, jour):
+    lat = math.radians(lat)
+    lon = math.radians(lon)
+    declinaison = np.arcsin(np.sin(INCLINAISON) * np.sin(2 * math.pi * (jour - 81) / 365))
+    soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
+    soleil /= np.linalg.norm(soleil)
+    puissances = []
+    for h in range(24):
+        angle = math.radians(15 * (h - 12))
+        x = np.cos(lat) * np.cos(lon + angle)
+        y = np.cos(lat) * np.sin(lon + angle)
+        z = np.sin(lat)
+        normale = np.array([x, y, z])
+        puissances.append(max(0, S0 * np.dot(normale, soleil)))
+    return puissances
 
-def run_model1(lat, lon):
-    # Simulation basique : sinusoïde
-    dates = generate_dates('year')
-    T = [20 + 5 * np.sin(2 * np.pi * i / len(dates)) for i, _ in enumerate(dates)]
-    return dates, T
+def puissance_annee(lat, lon):
+    return [val for jour in range(1, 366) for val in puissance_jour(lat, lon, jour)]
 
-def run_model2(lat, lon):
-    dates = generate_dates('month')
-    T = [15 + 3 * np.sin(4 * np.pi * i / len(dates)) for i, _ in enumerate(dates)]
+def temperature(P_recu, c):
+    S = 1
+    T0 = 273
+    dt = 3600
+    A = 0.3
+    T = [T0]
+    for P in P_recu:
+        flux_sortant = 0.5 * SIGMA * S * (T[-1])**4
+        T.append(T[-1] + dt * ((1 - A) * P * S - flux_sortant) / c)
+    return np.array(T)
+
+# ---------- Route /run inchangée pour compatibilité ----------
+@app.route("/run")
+def run_old():
+    model = int(request.args.get("model", 1))
+    lat   = float(request.args.get("lat", 48.85))
+    lon   = float(request.args.get("lon", 2.35))
     fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    return fig
-
-def run_model3(lat, lon):
-    dates = generate_dates('day')
-    T = [10 + 2 * np.sin(8 * np.pi * i / len(dates)) for i, _ in enumerate(dates)]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    return fig
-
-def run_model4(lat, lon):
-    dates = generate_dates('year')
-    T = [25 + 7 * np.sin(1 * np.pi * i / len(dates)) for i, _ in enumerate(dates)]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    return fig
-
-# Route principale
-
-@app.route('/run')
-def run():
-    model = int(request.args.get('model', 1))
-    lat = float(request.args.get('lat', 0))
-    lon = float(request.args.get('lon', 0))
-
     if model == 1:
-        dates, T = run_model1(lat, lon)
-        # Retourne JSON ou autre selon modèle 1
-        return {'dates': [d.isoformat() for d in dates], 'T': T}
-    elif model == 2:
-        fig = run_model2(lat, lon)
-    elif model == 3:
-        fig = run_model3(lat, lon)
-    elif model == 4:
-        fig = run_model4(lat, lon)
+        x, y = modele1_series()
+        ax.plot(x, y)
+        ax.set_xlabel("Temps (h)")
     else:
-        return {'error': 'Modèle inconnu'}, 400
-
-    # Génération de l'image
+        P  = puissance_annee(lat, lon)
+        c_map = {2:2.25e5, 3:1.5e5, 4:3e5}
+        T  = temperature(P, c_map.get(model, 2.25e5))
+        dates = [datetime.datetime(2024,1,1)+datetime.timedelta(hours=i) for i in range(len(T))]
+        ax.plot(dates, T)
+        ax.set_xlabel("Temps")
+    ax.set_ylabel("Température (K)")
+    ax.set_title(f"Modèle {model}")
+    ax.grid(True)
     buf = io.BytesIO()
-    fig.savefig(buf, format='png')
+    fig.savefig(buf, format="png", bbox_inches="tight")
     buf.seek(0)
-    return send_file(buf, mimetype='image/png')
+    plt.close(fig)
+    return send_file(buf, mimetype="image/png")
+
+# ---------- Nouvelle fonction : 3 zooms ----------
+def graphiques_multi_zoom(model, lat, lon):
+    """Retourne un buffer PNG contenant 3 sous‑graphiques à 3 échelles"""
+    if model == 1:
+        x = np.linspace(0, 24, 1000)
+        T = 273 + 10 * np.exp(-x / 5)
+        time_array = x  # en heures
+        unit = "h"
+    else:
+        P = puissance_annee(lat, lon)
+        c_map = {2:2.25e5, 3:1.5e5, 4:3e5}
+        T = temperature(P, c_map.get(model, 2.25e5))
+        time_array = [datetime.datetime(2024,1,1)+datetime.timedelta(hours=i) for i in range(len(T))]
+        unit = ""  # datetime
+    # Création figure
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12))
+    # Annual
+    axes[0].plot(time_array, T)
+    axes[0].set_title("Échelle annuelle")
+    # Monthly (30j)
+    if model == 1:
+        idx_m = (x <= 24)  # tout repris (pas pertinent pour modèle 1)
+        axes[1].plot(time_array, T)
+        axes[1].set_title("Échelle journalière (modèle 1)")
+    else:
+        axes[1].plot(time_array[:30*24], T[:30*24])
+        axes[1].set_title("Échelle mensuelle (30 jours)")
+    # Daily (24h)
+    if model == 1:
+        axes[2].plot(time_array, T)
+        axes[2].set_title("Échelle journalière")
+        axes[2].set_xlabel(f"Temps ({unit})")
+    else:
+        axes[2].plot(time_array[:24], T[:24])
+        axes[2].set_title("Échelle journalière (premier jour)")
+        axes[2].set_xlabel("Temps")
+    for ax in axes:
+        ax.set_ylabel("Température (K)")
+        ax.grid(True)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    buf.seek(0)
+    plt.close(fig)
+    return buf
+
+# ---------- Nouvelle route -------------------
+@app.route("/multi_zoom")
+def multi_zoom():
+    model = int(request.args.get("model", 1))
+    lat   = float(request.args.get("lat", 48.85))
+    lon   = float(request.args.get("lon", 2.35))
+    buf = graphiques_multi_zoom(model, lat, lon)
+    return send_file(buf, mimetype="image/png")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)

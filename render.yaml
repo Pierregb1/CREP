@@ -1,8 +1,12 @@
+
 services:
   - type: web
-    name: simulation-crep
+    name: crep-online
     env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
     plan: free
-    region: par
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn main:app --bind 0.0.0.0:$PORT"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11

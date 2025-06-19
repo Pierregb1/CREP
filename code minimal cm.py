@@ -1,28 +1,22 @@
+
+# Même code que précédemment pour classify_point / masse_volumique_point
 from mpl_toolkits.basemap import Basemap
-import numpy as np
+from shapely.geometry import Point, Polygon
+import matplotlib.pyplot as plt
 
-# Exemple de code minimal pour tracer une carte
+fig, ax = plt.subplots()
+m = Basemap(projection='cyl', resolution='l', ax=ax)
+m.drawcoastlines()
+shapely_land_polygons = [Polygon(poly.get_coords()) for poly in m.landpolygons]
 
-def plot_map():
-    # Création d'une carte centrée
-    m = Basemap(projection='merc', llcrnrlat=-80, urcrnrlat=80,
-                llcrnrlon=-180, urcrnrlon=180, lat_ts=20, resolution='c')
-    m.drawcoastlines()
+def classify_point(lon, lat):
+    if abs(lat) > 75:
+        return 2060
+    point = Point(lon, lat)
+    return 1046 if any(p.contains(point) for p in shapely_land_polygons) else 4180
 
-    # Exemple de données aléatoires
-    lons = np.linspace(-180, 180, 30)
-    lats = np.linspace(-80, 80, 20)
-    data = np.random.rand(len(lats), len(lons))
-
-    # Transformation des coordonnées
-    x, y = np.meshgrid(lons, lats)
-    xi, yi = m(x, y)
-
-    # Tracé des données
-    cs = m.contourf(xi, yi, data)
-
-    # Affichage
-    print(cs)
-
-if __name__ == "__main__":
-    plot_map()
+def masse_volumique_point(lon, lat):
+    if abs(lat) > 75:
+        return 917
+    point = Point(lon, lat)
+    return 2600 if any(p.contains(point) for p in shapely_land_polygons) else 1000

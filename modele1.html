@@ -1,19 +1,24 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 1</title>
+  <title>Modèle 1 — Refroidissement</title>
 </head>
 <body>
-  <h2>Affichage du Modèle 1</h2>
-  <div id="graphique"></div>
+  <h1>Modèle 1 — Refroidissement (3 zooms)</h1>
+  <p>Ce modèle ne nécessite pas de latitude ni longitude.</p>
+  <button onclick="afficherGraphique()">Afficher les 3 graphiques</button>
+  <div id="graphique">
+    <h3>Résultat :</h3>
+    <img id="imageGraphique" src="" alt="Graphiques" style="max-width:100%;border:1px solid #ccc;">
+  </div>
   <script>
-    async function afficherGraphique() {
-      const resp = await fetch('https://votre-app.onrender.com/run?model=1&lat=48.85&lon=2.35');
-      const data = await resp.json();
-      console.log(data);
-      // Vous pouvez utiliser une librairie JS pour tracer la courbe
+    function afficherGraphique(){
+      const url = `https://crep-online.onrender.com/multi_zoom?model=1&t=${Date.now()}`;
+      document.getElementById('imageGraphique').src = url;
     }
+    // Affichage par défaut
     afficherGraphique();
   </script>
 </body>
