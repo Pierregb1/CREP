@@ -2,15 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 4 — Simulation annuelle</title>
+  <title>Modèle 4 — Simulation annuelle (capacité thermique 3e5)</title>
 </head>
 <body>
-  <h1>Modèle 4 — Simulation annuelle</h1>
+  <h1>Modèle 4 — Simulation annuelle (capacité thermique 3e5)</h1>
   <form onsubmit="event.preventDefault(); afficherGraphique();">
     <label for="lat">Latitude :</label>
     <input type="number" id="lat" name="lat" step="0.01" value="48.85"><br><br>
     <label for="lon">Longitude :</label>
     <input type="number" id="lon" name="lon" step="0.01" value="2.35"><br><br>
+    <label for="zoomX">Zoom abscisses :</label>
+    <input type="range" id="zoomX" min="1" max="10" step="0.1" value="1">
+    <span id="zoom-val">1.0</span><br><br>
     <button type="submit">Afficher le graphique</button>
   </form>
 
@@ -23,9 +26,22 @@
     function afficherGraphique() {
       const lat = document.getElementById('lat').value;
       const lon = document.getElementById('lon').value;
-      const url = `https://crep-online.onrender.com/run?model=4&lat=${lat}&lon=${lon}`;
+      const zoomX = document.getElementById('zoomX').value;
+      const url = `https://crep-online.onrender.com/run?model=4&lat=${lat}&lon=${lon}&zoomX=${zoomX}&t=${Date.now()}`;
       document.getElementById('imageGraphique').src = url;
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const zoomInput = document.getElementById('zoomX');
+      const zoomVal = document.getElementById('zoom-val');
+
+      zoomInput.addEventListener('input', () => {
+        zoomVal.textContent = zoomInput.value;
+        afficherGraphique();
+      });
+
+      afficherGraphique();
+    });
   </script>
 </body>
 </html>
