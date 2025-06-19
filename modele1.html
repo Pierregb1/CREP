@@ -1,42 +1,67 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 1</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <title>Modèle 1 — Refroidissement</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.0"></script>
+  <style>
+    canvas { max-width: 100%; border: 1px solid #ccc; }
+  </style>
 </head>
 <body>
-  <h1>Modèle 1</h1>
-  
-  <label for="days">Durée :</label>
-  <select id="days">
-    <option value="1">1 jour</option>
-    <option value="30">30 jours</option>
-    <option value="365" selected>1 an</option>
-  </select><br><br>
-  <button onclick="afficher()">Afficher</button>
-  <div id="chart" style="width:100%; height:500px;"></div>
+  <h1>Modèle 1 — Refroidissement</h1>
+  <label for="zoomX">Zoom abscisses :</label>
+  <input type="range" id="zoomX" min="1" max="5" step="0.1" value="1">
+  <span id="zoom-val">1.0</span>
+  <canvas id="graphiqueCanvas"></canvas>
 
   <script>
-    function afficher() {
-      const days = document.getElementById("days").value;
-      
-      const url = `/data?model=1&days=${days}`;
-      fetch(url).then(r => r.json()).then(d => {
-        Plotly.newPlot("chart", [{
-          x: d.x,
-          y: d.y,
-          mode: 'lines',
-          type: 'scatter'
-        }], {
-          title: "Modèle 1",
-          xaxis: { title: "Temps", rangeslider: {} },
-          yaxis: { title: "Température (K)" }
-        }, {responsive:true});
-      });
+    let chart;
+    function afficherGraphique() {
+      const zoomX = document.getElementById('zoomX').value;
+      document.getElementById('zoom-val').textContent = zoomX;
+      fetch(`/data?model=1&zoomX=${zoomX}&t=${Date.now()}`)
+        .then(response => response.json())
+        .then(data => {
+          const ctx = document.getElementById('graphiqueCanvas').getContext('2d');
+          if (chart) chart.destroy();
+          chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: data.x,
+              datasets: [{
+                label: 'Température (K)',
+                data: data.y,
+                borderColor: 'blue',
+                fill: false
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                zoom: {
+                  zoom: {
+                    wheel: { enabled: true },
+                    pinch: { enabled: true },
+                    mode: 'x'
+                  },
+                  pan: { enabled: true, mode: 'x' }
+                }
+              },
+              scales: {
+                x: { title: { display: true, text: "Temps (h)" }},
+                y: { title: { display: true, text: "Température (K)" }}
+              }
+            }
+          });
+        });
     }
-    document.addEventListener('DOMContentLoaded', afficher);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('zoomX').addEventListener('input', afficherGraphique);
+      afficherGraphique();
+    });
   </script>
 </body>
 </html>
