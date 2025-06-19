@@ -1,19 +1,13 @@
-# CREP — Visualisation interactive
+# CREP — Visualisation interactive avec zoom (Chart.js)
 
-Ce dépôt affiche des graphes de température dynamiques avec zoom (Chart.js) et renvoie les données via Flask.
+Déployez ce projet sur Render.com pour afficher des graphiques interactifs de température selon différents modèles physiques.
 
-## Déploiement rapide sur Render
+## Déploiement
+1. Déposez ce dossier sur un dépôt GitHub
+2. Allez sur https://render.com → New Web Service
+3. Connectez votre dépôt
+4. Render détecte `render.yaml` et déploie le site automatiquement
 
-1. Poussez ces fichiers sur GitHub.
-2. Allez sur Render.com → New Web Service.
-3. Sélectionnez votre repo, Render détecte `render.yaml`.
-4. Une fois déployé, accédez à `https://<votre-service>.onrender.com`.
-
-⚠️ Si vous servez les pages HTML ailleurs (GitHub Pages, etc.),
-mettez dans chaque `modeleX.html` :
-
-```js
-const API = 'https://<votre-service>.onrender.com';
-```
-
-pour pointer vers l’API Flask.
+Vous pouvez ensuite accéder à :
+- `/modele1.html` à `/modele4.html` pour tester les modèles
+- Le zoom fonctionne via Chart.js Zoom Plugin
