@@ -35,25 +35,19 @@
     </div>
   </div>
 
-  <script>
-    function afficherGraphique() {
-      const zoomX = document.getElementById('zoomX').value;
-      const url = `https://crep-online.onrender.com/run?model=1&zoomX=${zoomX}&t=${Date.now()}`;
-      const img = document.getElementById('imageGraphique');
-      img.src = url;
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const zoomInput = document.getElementById('zoomX');
-      const zoomVal = document.getElementById('zoom-val');
-
-      zoomInput.addEventListener('input', () => {
-        zoomVal.textContent = zoomInput.value;
-        afficherGraphique();
+  
+<script>
+  function afficherGraphique() {
+    const lat = document.getElementById('lat')?.value || 48.85;
+    const lon = document.getElementById('lon')?.value || 2.35;
+    fetch(`https://crep-online.onrender.com/multi_zoom_base64?model=1&lat=${lat}&lon=${lon}`)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById("imageGraphique").src = data.img;
       });
+  }
+  document.addEventListener('DOMContentLoaded', afficherGraphique);
+</script>
 
-      afficherGraphique();
-    });
-  </script>
 </body>
 </html>
