@@ -19,19 +19,13 @@
     <img id="imageGraphique" src="" alt="Le graphique apparaîtra ici" style="max-width: 100%; border: 1px solid #ccc;"/>
   </div>
 
-  
-<script>
-  function afficherGraphique() {
-    const lat = document.getElementById('lat')?.value || 48.85;
-    const lon = document.getElementById('lon')?.value || 2.35;
-    fetch(`https://crep-online.onrender.com/multi_zoom_base64?model=4&lat=${lat}&lon=${lon}`)
-      .then(response => response.json())
-      .then(data => {
-        document.getElementById("imageGraphique").src = data.img;
-      });
-  }
-  document.addEventListener('DOMContentLoaded', afficherGraphique);
-</script>
-
+  <script>
+    function afficherGraphique() {
+      const lat = document.getElementById('lat').value;
+      const lon = document.getElementById('lon').value;
+      const url = `https://crep-online.onrender.com/run?model=4&lat=${lat}&lon=${lon}`;
+      document.getElementById('imageGraphique').src = url;
+    }
+  </script>
 </body>
 </html>
