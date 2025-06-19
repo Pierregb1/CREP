@@ -2,27 +2,36 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 1 — Refroidissement</title>
+  <title>Modèle 1 — Simulation annuelle</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.0"></script>
-  <style>
-    canvas { max-width: 100%; border: 1px solid #ccc; }
-  </style>
+  <style>canvas{max-width:100%;border:1px solid #ccc;}</style>
 </head>
 <body>
-  <h1>Modèle 1 — Refroidissement</h1>
-  <label for="zoomX">Zoom abscisses :</label>
-  <input type="range" id="zoomX" min="1" max="5" step="0.1" value="1">
-  <span id="zoom-val">1.0</span>
+  <h1>Modèle 1 — Simulation annuelle</h1>
+  <div>
+    <label for="lat">Latitude :</label>
+    <input type="number" id="lat" step="0.01" value="48.85">
+    <label for="lon">Longitude :</label>
+    <input type="number" id="lon" step="0.01" value="2.35">
+    <label for='zoomX'>Zoom :</label><input type='range' id='zoomX' min='1' max='5' step='0.1' value='1'>
+    <button onclick="afficherGraphique()">Afficher</button>
+  </div>
   <canvas id="graphiqueCanvas"></canvas>
 
   <script>
+    const API = ''; // Laisser vide pour même domaine. Mettre 'https://crep-online.onrender.com' si page hébergée ailleurs
     let chart;
+
     function afficherGraphique() {
-      const zoomX = document.getElementById('zoomX').value;
-      document.getElementById('zoom-val').textContent = zoomX;
-      fetch(`/data?model=1&zoomX=${zoomX}&t=${Date.now()}`)
-        .then(response => response.json())
+      const params = new URLSearchParams({
+        model: 1,
+        lat: document.getElementById('lat').value,
+        lon: document.getElementById('lon').value
+      });
+      params.append('zoomX', document.getElementById('zoomX').value);
+      fetch(`${API}/data?` + params.toString())
+        .then(r => r.json())
         .then(data => {
           const ctx = document.getElementById('graphiqueCanvas').getContext('2d');
           if (chart) chart.destroy();
@@ -33,12 +42,11 @@
               datasets: [{
                 label: 'Température (K)',
                 data: data.y,
-                borderColor: 'blue',
+                borderColor: n===1 ? 'blue' : 'green',
                 fill: false
               }]
             },
             options: {
-              responsive: true,
               plugins: {
                 zoom: {
                   zoom: {
@@ -50,18 +58,23 @@
                 }
               },
               scales: {
-                x: { title: { display: true, text: "Temps (h)" }},
-                y: { title: { display: true, text: "Température (K)" }}
+                x: {
+                  title: { display: true, text: 'Temps' },
+                  ticks: { maxRotation: 0 }
+                },
+                y: { title: { display: true, text: 'Température (K)' } }
               }
             }
           });
+        })
+        .catch(err => {
+          alert('Erreur lors de la récupération des données : ' + err);
+          console.error(err);
         });
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('zoomX').addEventListener('input', afficherGraphique);
-      afficherGraphique();
-    });
+    // Auto‑charge au premier affichage
+    document.addEventListener('DOMContentLoaded', afficherGraphique);
   </script>
 </body>
 </html>

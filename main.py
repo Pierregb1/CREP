@@ -1,39 +1,58 @@
-from flask import Flask, request, send_file, jsonify
-import matplotlib.pyplot as plt
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 import numpy as np
 import datetime
 import math
-import io
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='.')
+CORS(app)  # Autorise n'importe quelle origine (GitHub Pages → Render)
+
+@app.route('/')
+def home():
+    # Sert index.html
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:filename>')
+def static_files(filename):
+    # Sert n'importe quel fichier statique (HTML, JS, CSS…)
+    return send_from_directory('.', filename)
 
 @app.route("/data")
 def get_model_data():
+    """Retourne les données JSON pour un modèle.
+
+    Paramètres query :
+      - model (int) : 1,2,3,4
+      - lat, lon (float) : latitude, longitude (modèles 2‑4)
+      - zoomX (float) : facteur de zoom (modèle 1)
+    """
     model = int(request.args.get("model", 1))
     lat = float(request.args.get("lat", 48.85))
     lon = float(request.args.get("lon", 2.35))
     zoomX = float(request.args.get("zoomX", 1.0))
 
+    # Modèle 1 : décroissance exponentielle sur 24 h, avec zoom
     if model == 1:
         time_max = 24 / zoomX
         x = np.linspace(0, time_max, 1000)
         y = 273 + 10 * np.exp(-x / 5)
-        return jsonify({"x": list(x), "y": list(y)})
+        return jsonify({"x": x.tolist(), "y": y.tolist()})
 
-    def puissance(lat, lon, jour):
+    # Fonctions communes aux modèles 2–4
+    def puissance(lat_deg, lon_deg, jour):
         S0 = 1361
-        lat = math.radians(lat)
-        lon = math.radians(lon)
+        lat = math.radians(lat_deg)
+        lon = math.radians(lon_deg)
         inclinaison = math.radians(23.5)
-        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
-        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
-        soleil /= np.linalg.norm(soleil)
+        declinaison = math.asin(math.sin(inclinaison) * math.sin(2 * math.pi * (jour - 81) / 365))
+        soleil = np.array([math.cos(declinaison), 0, math.sin(declinaison)])
+        soleil = soleil / np.linalg.norm(soleil)
         puissances = []
         for h in range(24):
             angle = math.radians(15 * (h - 12))
-            x = np.cos(lat) * np.cos(lon + angle)
-            y = np.cos(lat) * np.sin(lon + angle)
-            z = np.sin(lat)
+            x = math.cos(lat) * math.cos(lon + angle)
+            y = math.cos(lat) * math.sin(lon + angle)
+            z = math.sin(lat)
             normale = np.array([x, y, z])
             puissances.append(max(0, S0 * np.dot(normale, soleil)))
         return puissances
@@ -56,11 +75,20 @@ def get_model_data():
             T.append(T[i] + dt * ((1 - A) * P_recu[i] * S - flux_sortant) / c)
         return T
 
-    P = annee(chaque_jour(lat, lon))
     c_dict = {2: 2.25e5, 3: 1.5e5, 4: 3e5}
-    T = temp(P, c_dict.get(model, 2.25e5))
-    x = [(datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i)).strftime("%Y-%m-%d %H:%M") for i in range(len(T))]
-    return jsonify({"x": x, "y": list(T)})
+    if model in c_dict:
+        P = annee(chaque_jour(lat, lon))
+        T = temp(P, c_dict[model])
+        x_dates = [(datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i)).strftime("%Y-%m-%d %H:%M")
+                   for i in range(len(T))]
+        return jsonify({"x": x_dates, "y": T})
+
+    # Modèle non reconnu
+    return jsonify({"error": "Modèle inconnu"}), 400
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    # Render définira $PORT automatiquement
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
