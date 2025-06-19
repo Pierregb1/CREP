@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 # =================== Modèle 1 =================== #
 app.route("/run")
-def run_model():
+def run_model1():
     model = request.args.get("model", "1")
     zoomX = float(request.args.get("zoomX", 1.0))
 
