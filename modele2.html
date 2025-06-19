@@ -2,32 +2,17 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Modèle 2 — Simulation annuelle</title>
+  <title>Modèle 2</title>
 </head>
 <body>
-  <h1>Modèle 2 — Simulation annuelle</h1>
-  <form onsubmit="event.preventDefault(); afficherGraphique();">
-    <label for="lat">Latitude :</label>
-    <input type="number" id="lat" step="0.01" value="48.85"><br><br>
-    <label for="lon">Longitude :</label>
-    <input type="number" id="lon" step="0.01" value="2.35"><br><br>
-    <button type="submit">Afficher</button>
-  </form>
-  <h3>Résultat :</h3>
-  <h4>Année</h4>
-  <img id="img-year" style="max-width:100%;border:1px solid #ccc;"><br>
-  <h4>Mois</h4>
-  <img id="img-month" style="max-width:100%;border:1px solid #ccc;"><br>
-  <h4>Jour</h4>
-  <img id="img-day" style="max-width:100%;border:1px solid #ccc;">
-<script>
-function afficherGraphique(){
-  const lat = document.getElementById('lat').value;
-  const lon = document.getElementById('lon').value;
-  ['year','month','day'].forEach(scale => {
-    document.getElementById(`img-${scale}`).src = `/run?model=2&lat=${lat}&lon=${lon}&scale=${scale}&t=`+Date.now();
-  });
-}
-</script>
+  <h2>Affichage du Modèle 2</h2>
+  <img id="graphique" alt="Graphique Modèle 2" />
+  <script>
+    function afficherGraphique() {
+      const url = 'https://votre-app.onrender.com/run?model=2&lat=48.85&lon=2.35';
+      document.getElementById('graphique').src = url;
+    }
+    afficherGraphique();
+  </script>
 </body>
 </html>
