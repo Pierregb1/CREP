@@ -1,3 +1,4 @@
+
 from flask import Flask, request, send_file
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,37 +8,28 @@ import math
 
 app = Flask(__name__)
 
-# =================== Modèle 1 =================== #
-app.route("/run")
-def run_model():
-    model = request.args.get("model", "1")
-    zoomX = float(request.args.get("zoomX", 1.0))
-
+# Fonction générique pour générer un graphique zoomé
+def generer_graphique_zoome(x, y, zoomX=1.0, titre="Graphique", xlabel="Temps", ylabel="Valeur"):
     fig, ax = plt.subplots()
+    max_index = int(len(x) / zoomX)
+    x_zoom = x[:max_index]
+    y_zoom = y[:max_index]
+    ax.plot(x_zoom, y_zoom)
+    ax.set_title(titre)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(True)
+    return fig
 
-    if model == "1":
-        # On modifie l’échelle de temps : plus de points, mais sur une durée plus courte si zoomX > 1
-        time_max = 24 / zoomX  # 24h divisées par le facteur de zoom
-        x = np.linspace(0, time_max, 1000)
-        y = 273 + 10 * np.exp(-x / 5)
-        ax.plot(x, y)
+# =================== Modèle 1 =================== #
+def run_model1(zoomX=1.0):
+    time_max = 24 / zoomX
+    x = np.linspace(0, time_max, 1000)
+    y = 273 + 10 * np.exp(-x / 5)
+    return generer_graphique_zoome(x, y, 1.0, "Modèle 1 : Refroidissement", "Temps (heures)", "Température (K)")
 
-        ax.set_title("Modèle 1 : Refroidissement")
-        ax.set_xlabel("Temps (heures)")
-        ax.set_ylabel("Température (K)")
-        ax.grid(True)
-
-    else:
-        ax.text(0.5, 0.5, f"Modèle {model} non pris en charge", ha='center', va='center')
-        ax.axis('off')
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight')
-    buf.seek(0)
-    plt.close(fig)
-    return send_file(buf, mimetype='image/png')
 # =================== Modèle 2 =================== #
-def run_model2(lat, lon):
+def run_model2(lat, lon, zoomX=1.0):
     def puissance(lat, lon, jour):
         S0 = 1361
         lat = math.radians(lat)
@@ -78,16 +70,10 @@ def run_model2(lat, lon):
     P = annee(chaque_jour(lat, lon))
     T = temp(P)
     dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    ax.set_title("Modèle 2 — Température annuelle")
-    ax.set_xlabel("Temps")
-    ax.set_ylabel("Température (K)")
-    ax.grid(True)
-    return fig
+    return generer_graphique_zoome(dates, T, zoomX, "Modèle 2 — Température annuelle", "Temps", "Température (K)")
 
 # =================== Modèle 3 =================== #
-def run_model3(lat, lon):
+def run_model3(lat, lon, zoomX=1.0):
     def puissance(lat, lon, jour):
         S0 = 1361
         lat = math.radians(lat)
@@ -128,16 +114,10 @@ def run_model3(lat, lon):
     P = annee(chaque_jour(lat, lon))
     T = temp(P)
     dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    ax.set_title("Modèle 3 — Température annuelle")
-    ax.set_xlabel("Temps")
-    ax.set_ylabel("Température (K)")
-    ax.grid(True)
-    return fig
+    return generer_graphique_zoome(dates, T, zoomX, "Modèle 3 — Température annuelle", "Temps", "Température (K)")
 
 # =================== Modèle 4 =================== #
-def run_model4(lat, lon):
+def run_model4(lat, lon, zoomX=1.0):
     def puissance(lat, lon, jour):
         S0 = 1361
         lat = math.radians(lat)
@@ -178,29 +158,24 @@ def run_model4(lat, lon):
     P = annee(chaque_jour(lat, lon))
     T = temp(P)
     dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    ax.set_title("Modèle 4 — Température annuelle")
-    ax.set_xlabel("Temps")
-    ax.set_ylabel("Température (K)")
-    ax.grid(True)
-    return fig
+    return generer_graphique_zoome(dates, T, zoomX, "Modèle 4 — Température annuelle", "Temps", "Température (K)")
 
-# =================== API Route =================== #
+# =================== Route principale =================== #
 @app.route("/run")
 def run():
     model = int(request.args.get("model", 1))
     lat = float(request.args.get("lat", 48.85))
     lon = float(request.args.get("lon", 2.35))
+    zoomX = float(request.args.get("zoomX", 1.0))
 
     if model == 1:
-        fig = run_model1()
+        fig = run_model1(zoomX)
     elif model == 2:
-        fig = run_model2(lat, lon)
+        fig = run_model2(lat, lon, zoomX)
     elif model == 3:
-        fig = run_model3(lat, lon)
+        fig = run_model3(lat, lon, zoomX)
     elif model == 4:
-        fig = run_model4(lat, lon)
+        fig = run_model4(lat, lon, zoomX)
     else:
         return "Modèle inconnu", 400
 
