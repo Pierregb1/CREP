@@ -1,7 +1,12 @@
-
 services:
   - type: web
     name: crep-online
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
+    plan: free
+    region: frankfurt
+    runtime: python
+    branch: main
+    rootDir: .
+    staticPublishPath: .

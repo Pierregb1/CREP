@@ -1,56 +1,18 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>CREP – Simulation interactive</title>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<style>
-body{font-family:Arial, sans-serif; margin:2rem;}
-label{margin-right:0.5rem;}
-</style>
+  <meta charset="UTF-8">
+  <title>CREP — Choix du modèle</title>
 </head>
 <body>
-<h1>Simulation thermique – CREP</h1>
+  <h1>Bienvenue sur CREP</h1>
+  <p>Choisissez un modèle à exécuter :</p>
 
-<label>Modèle :</label>
-<select id="model">
-  <option value="1">1 – Refroidissement simple</option>
-  <option value="2" selected>2 – c = 2.25e5</option>
-  <option value="3">3 – c = 1.5e5</option>
-  <option value="4">4 – API NASA (vent/albédo)</option>
-</select><br><br>
-
-<label>Durée :</label>
-<select id="days">
-  <option value="1">1 jour</option>
-  <option value="30">30 jours</option>
-  <option value="365" selected>365 jours</option>
-</select><br><br>
-
-<label>Latitude :</label><input type="number" id="lat" value="48.85" step="0.01">
-<label>Longitude :</label><input type="number" id="lon" value="2.35" step="0.01"><br><br>
-
-<button onclick="updateGraph()">Afficher / Rafraîchir</button>
-
-<div id="chart" style="width:100%;height:600px;"></div>
-
-<script>
-function updateGraph(){
-  const model = document.getElementById('model').value;
-  const days  = document.getElementById('days').value;
-  const lat   = document.getElementById('lat').value;
-  const lon   = document.getElementById('lon').value;
-  const url = `/data?model=${model}&days=${days}&lat=${lat}&lon=${lon}`;
-  fetch(url)
-    .then(r=>r.json())
-    .then(d=>{
-      const trace = {x:d.x, y:d.y, mode:'lines', type:'scatter'};
-      const layout={title:`Modèle ${model} – ${days} jours`,xaxis:{title:'Temps',rangeslider:{}},yaxis:{title:'Température (K)'}};
-      Plotly.newPlot('chart',[trace],layout,{responsive:true});
-    });
-}
-document.addEventListener('DOMContentLoaded',updateGraph);
-</script>
+  <ul>
+    <li><a href="modele1.html">Modèle 1 — Refroidissement simple (interactive)</a></li>
+    <li><a href="modele2.html">Modèle 2 — Capacité thermique 2.25e5 (interactive)</a></li>
+    <li><a href="modele3.html">Modèle 3 — Capacité thermique 1.5e5 (interactive)</a></li>
+    <li><a href="modele4.html">Modèle 4 — Capacité thermique 3e5 (interactive)</a></li>
+  </ul>
 </body>
 </html>
