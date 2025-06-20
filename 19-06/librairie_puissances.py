@@ -66,9 +66,8 @@ def P_abs_atm_thermal(lat: float, long: float, t: float, T: float):
     return 358
 
 
-def P_em_atm_thermal_up(lat: float, long: float, t: float):
-    return 170
-
+def P_em_atm_thermal_up(lat: float, long: float, t: float, alpha, P_emis):
+    return (alpha/2)*P_emis
 
 def P_em_atm_thermal_down(lat: float, long: float, t: float, alpha, P_emis):
-   return (alpha/2)*P_emis
+    return (alpha/2)*P_emis
