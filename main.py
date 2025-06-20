@@ -62,104 +62,44 @@ def temperature_evolution(P_recu, c):
 # =================== Modèle 2 et 4 identiques à avant (omises pour concision) =================== #
 
 # =================== Modèle 3 – 3 ZOOMS =================== #
-def run_model3(lat, lon, daily_date_str="2024-01-01"):
-    # Parsing de la date journalière demandée
-    try:
-        daily_date = datetime.date.fromisoformat(daily_date_str)
-    except ValueError:
-        daily_date = datetime.date(2024, 1, 1)  # défaut
-    if daily_date.year != 2024:
-        # on force l'année 2024 pour cohérence de l'échelle temps
-        daily_date = daily_date.replace(year=2024)
-
+def run_model3(lat, lon):
+    """Retourne une figure avec 3 sous‑graphes : annuel, mensuel, journalier."""
     P = sequence_annee(lat, lon)
     T = temperature_evolution(P, c=1.5e5)
     dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
 
-    # Indices utiles
-    day_index = daily_date.timetuple().tm_yday - 1
-    day_start = day_index * 24
-    day_end = day_start + 24
-
-    # Mois contenant la date choisie
-    month_start_day = day_index - daily_date.day + 1
-    days_in_month = calendar.monthrange(2024, daily_date.month)[1]
-    month_start = month_start_day * 24
-    month_end = month_start + days_in_month * 24
+    # Indices pour découper
+    jour_heures = 24
+    mois_heures = 31 * 24  # janvier
 
     fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharey=True)
 
     # Annuel
     axes[0].plot(dates, T)
     axes[0].set_title("Température annuelle")
+    axes[0].set_xlabel("")
+    axes[0].set_ylabel("T (K)")
     axes[0].grid(True)
 
-    # Mensuel (mois du daily_date)
-    axes[1].plot(dates[month_start:month_end], T[month_start:month_end], color='tab:orange')
-    axes[1].set_title(f"Température – {daily_date.strftime('%B')}")
+    # Mensuel : janvier
+    axes[1].plot(dates[:mois_heures], T[:mois_heures], color='tab:orange')
+    axes[1].set_title("Température – janvier")
+    axes[1].set_xlabel("")
+    axes[1].set_ylabel("T (K)")
     axes[1].grid(True)
 
-    # Journalier
-    axes[2].plot(dates[day_start:day_end], T[day_start:day_end], color='tab:green')
-    axes[2].set_title(f"Température – {daily_date.strftime('%d %B')}")
-    axes[2].set_xlabel("Heure")
+    # Journalier : 1ᵉʳ janvier
+    axes[2].plot(dates[:jour_heures], T[:jour_heures], color='tab:green')
+    axes[2].set_title("Température – 1ᵉʳ janvier")
+    axes[2].set_xlabel("Temps")
+    axes[2].set_ylabel("T (K)")
     axes[2].grid(True)
 
     fig.suptitle(f"Modèle 3 – Lat {lat:.2f}°, Lon {lon:.2f}°", fontsize=14)
     fig.tight_layout(rect=[0, 0.03, 1, 0.97])
     return fig
 
-# =================== Modèle 2 =================== #
-def run_model2(lat, lon):
-    def puissance(lat, lon, jour):
-        S0 = 1361
-        lat = math.radians(lat)
-        lon = math.radians(lon)
-        inclinaison = math.radians(23.5)
-        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
-        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
-        soleil /= np.linalg.norm(soleil)
-        puissances = []
-        for h in range(24):
-            angle = math.radians(15 * (h - 12))
-            x = np.cos(lat) * np.cos(lon + angle)
-            y = np.cos(lat) * np.sin(lon + angle)
-            z = np.sin(lat)
-            normale = np.array([x, y, z])
-            puissances.append(max(0, S0 * np.dot(normale, soleil)))
-        return puissances
 
-    def chaque_jour(lat, lon):
-        return [puissance(lat, lon, j) for j in range(1, 366)]
-
-    def annee(P):
-        return [val for jour in P for val in jour]
-
-    def temp(P_recu):
-        c = 2.25e5
-        S = 1
-        T0 = 273
-        sigma = 5.67e-8
-        dt = 3600
-        A = 0.3
-        T = [T0]
-        for i in range(len(P_recu)):
-            flux_sortant = 0.5 * sigma * S * (T[i])**4
-            T.append(T[i] + dt * ((1 - A) * P_recu[i] * S - flux_sortant) / c)
-        return T
-
-    P = annee(chaque_jour(lat, lon))
-    T = temp(P)
-    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    ax.set_title("Modèle 2 — Température annuelle")
-    ax.set_xlabel("Temps")
-    ax.set_ylabel("Température (K)")
-    ax.grid(True)
-    return fig
-
-# =================== Modèle 4 =================== #
 def run_model4(lat, lon):
     def puissance(lat, lon, jour):
         S0 = 1361
@@ -207,6 +147,62 @@ def run_model4(lat, lon):
     ax.set_xlabel("Temps")
     ax.set_ylabel("Température (K)")
     ax.grid(True)
+    return fig
+
+
+
+def run_model2(lat, lon):
+    P = sequence_annee(lat, lon)
+    T = temperature_evolution(P, c=2.25e5)
+    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
+
+    jour_heures = 24
+    mois_heures = 31 * 24
+
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharey=True)
+
+    axes[0].plot(dates, T)
+    axes[0].set_title("Modèle 2 — Température annuelle")
+    axes[0].grid(True)
+
+    axes[1].plot(dates[:mois_heures], T[:mois_heures], color='tab:orange')
+    axes[1].set_title("Température – janvier")
+    axes[1].grid(True)
+
+    axes[2].plot(dates[:jour_heures], T[:jour_heures], color='tab:green')
+    axes[2].set_title("Température – 1ᵉʳ janvier")
+    axes[2].set_xlabel("Temps")
+    axes[2].grid(True)
+
+    fig.suptitle(f"Modèle 2 – Lat {lat:.2f}°, Lon {lon:.2f}°", fontsize=14)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
+    return fig
+
+def run_model4(lat, lon):
+    P = sequence_annee(lat, lon)
+    T = temperature_evolution(P, c=3e5)
+    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
+
+    jour_heures = 24
+    mois_heures = 31 * 24
+
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharey=True)
+
+    axes[0].plot(dates, T)
+    axes[0].set_title("Modèle 4 — Température annuelle")
+    axes[0].grid(True)
+
+    axes[1].plot(dates[:mois_heures], T[:mois_heures], color='tab:orange')
+    axes[1].set_title("Température – janvier")
+    axes[1].grid(True)
+
+    axes[2].plot(dates[:jour_heures], T[:jour_heures], color='tab:green')
+    axes[2].set_title("Température – 1ᵉʳ janvier")
+    axes[2].set_xlabel("Temps")
+    axes[2].grid(True)
+
+    fig.suptitle(f"Modèle 4 – Lat {lat:.2f}°, Lon {lon:.2f}°", fontsize=14)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
     return fig
 
 
