@@ -1,71 +1,214 @@
-
-from flask import Flask, request, redirect, url_for, Response, send_from_directory
-import subprocess, os, html
+from flask import Flask, request, send_file
+import matplotlib.pyplot as plt
+import numpy as np
+import io
+import datetime
+import math
 
 app = Flask(__name__)
 
-SCRIPT_MAP = {
-    "modele2": "scripts/modele2.py",
-    "modele3": "scripts/modele3.py",
-    "modele4": "scripts/modele4.py"
-}
+# =================== Modèle 1 =================== #
+app.route("/run")
+def run_model():
+    model = request.args.get("model", "1")
+    zoomX = float(request.args.get("zoomX", 1.0))
 
-@app.route("/")
-def home():
-    return send_from_directory(".", "index.html")
+    fig, ax = plt.subplots()
 
-@app.route("/static/<path:filename>")
-def static_files(filename):
-    return send_from_directory("static", filename)
+    if model == "1":
+        # On modifie l’échelle de temps : plus de points, mais sur une durée plus courte si zoomX > 1
+        time_max = 24 / zoomX  # 24h divisées par le facteur de zoom
+        x = np.linspace(0, time_max, 1000)
+        y = 273 + 10 * np.exp(-x / 5)
+        ax.plot(x, y)
 
-@app.route("/model/<model_name>", methods=["GET", "POST"])
-def model_page(model_name):
-    if model_name not in SCRIPT_MAP:
-        return "Modèle inconnu", 404
+        ax.set_title("Modèle 1 : Refroidissement")
+        ax.set_xlabel("Temps (heures)")
+        ax.set_ylabel("Température (K)")
+        ax.grid(True)
 
-    message = ""
-    lat = request.values.get("lat", "")
-    lon = request.values.get("lon", "")
-    zoom = request.values.get("zoom", "annuel")
+    else:
+        ax.text(0.5, 0.5, f"Modèle {model} non pris en charge", ha='center', va='center')
+        ax.axis('off')
 
-    if request.method == "POST":
-        lat = request.form["lat"]
-        lon = request.form["lon"]
-        zoom = request.form["zoom"]
-        # Run the script
-        try:
-            subprocess.run(
-                ["python", SCRIPT_MAP[model_name], lat, lon, zoom],
-                check=True
-            )
-            message = "Graphique mis à jour !"
-        except subprocess.CalledProcessError as e:
-            message = f"Erreur lors de la génération : {html.escape(str(e))}"
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close(fig)
+    return send_file(buf, mimetype='image/png')
+# =================== Modèle 2 =================== #
+def run_model2(lat, lon):
+    def puissance(lat, lon, jour):
+        S0 = 1361
+        lat = math.radians(lat)
+        lon = math.radians(lon)
+        inclinaison = math.radians(23.5)
+        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
+        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
+        soleil /= np.linalg.norm(soleil)
+        puissances = []
+        for h in range(24):
+            angle = math.radians(15 * (h - 12))
+            x = np.cos(lat) * np.cos(lon + angle)
+            y = np.cos(lat) * np.sin(lon + angle)
+            z = np.sin(lat)
+            normale = np.array([x, y, z])
+            puissances.append(max(0, S0 * np.dot(normale, soleil)))
+        return puissances
 
-    # Construct HTML dynamically
-    img_filename = f"{model_name}_graph_{zoom}.png"
-    img_path = f"/static/{img_filename}" if os.path.exists(f"static/{img_filename}") else ""
-    form_html = f'''
-    <h1>{html.escape(model_name.capitalize())}</h1>
-    <form method="post">
-      <label>Latitude : <input type="number" step="any" name="lat" value="{html.escape(lat)}" required></label><br>
-      <label>Longitude : <input type="number" step="any" name="lon" value="{html.escape(lon)}" required></label><br>
-      <label>Zoom:
-        <select name="zoom">
-          <option value="annuel" {"selected" if zoom=="annuel" else ""}>Annuel</option>
-          <option value="mensuel" {"selected" if zoom=="mensuel" else ""}>Mensuel</option>
-          <option value="journalier" {"selected" if zoom=="journalier" else ""}>Journalier</option>
-        </select>
-      </label><br>
-      <button type="submit">Générer</button>
-    </form>
-    <p>{html.escape(message)}</p>
-    '''
-    if img_path:
-        form_html += f'<h2>Graphique ({zoom})</h2><img src="{img_path}" width="100%">'
-    form_html += '<p><a href="/">Retour accueil</a></p>'
-    return Response(form_html, mimetype="text/html")
+    def chaque_jour(lat, lon):
+        return [puissance(lat, lon, j) for j in range(1, 366)]
+
+    def annee(P):
+        return [val for jour in P for val in jour]
+
+    def temp(P_recu):
+        c = 2.25e5
+        S = 1
+        T0 = 273
+        sigma = 5.67e-8
+        dt = 3600
+        A = 0.3
+        T = [T0]
+        for i in range(len(P_recu)):
+            flux_sortant = 0.5 * sigma * S * (T[i])**4
+            T.append(T[i] + dt * ((1 - A) * P_recu[i] * S - flux_sortant) / c)
+        return T
+
+    P = annee(chaque_jour(lat, lon))
+    T = temp(P)
+    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
+    fig, ax = plt.subplots()
+    ax.plot(dates, T)
+    ax.set_title("Modèle 2 — Température annuelle")
+    ax.set_xlabel("Temps")
+    ax.set_ylabel("Température (K)")
+    ax.grid(True)
+    return fig
+
+# =================== Modèle 3 =================== #
+def run_model3(lat, lon):
+    def puissance(lat, lon, jour):
+        S0 = 1361
+        lat = math.radians(lat)
+        lon = math.radians(lon)
+        inclinaison = math.radians(23.5)
+        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
+        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
+        soleil /= np.linalg.norm(soleil)
+        puissances = []
+        for h in range(24):
+            angle = math.radians(15 * (h - 12))
+            x = np.cos(lat) * np.cos(lon + angle)
+            y = np.cos(lat) * np.sin(lon + angle)
+            z = np.sin(lat)
+            normale = np.array([x, y, z])
+            puissances.append(max(0, S0 * np.dot(normale, soleil)))
+        return puissances
+
+    def chaque_jour(lat, lon):
+        return [puissance(lat, lon, j) for j in range(1, 366)]
+
+    def annee(P):
+        return [val for jour in P for val in jour]
+
+    def temp(P_recu):
+        c = 1.5e5
+        S = 1
+        T0 = 273
+        sigma = 5.67e-8
+        dt = 3600
+        A = 0.3
+        T = [T0]
+        for i in range(len(P_recu)):
+            flux_sortant = 0.5 * sigma * S * (T[i])**4
+            T.append(T[i] + dt * ((1 - A) * P_recu[i] * S - flux_sortant) / c)
+        return T
+
+    P = annee(chaque_jour(lat, lon))
+    T = temp(P)
+    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
+    fig, ax = plt.subplots()
+    ax.plot(dates, T)
+    ax.set_title("Modèle 3 — Température annuelle")
+    ax.set_xlabel("Temps")
+    ax.set_ylabel("Température (K)")
+    ax.grid(True)
+    return fig
+
+# =================== Modèle 4 =================== #
+def run_model4(lat, lon):
+    def puissance(lat, lon, jour):
+        S0 = 1361
+        lat = math.radians(lat)
+        lon = math.radians(lon)
+        inclinaison = math.radians(23.5)
+        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
+        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
+        soleil /= np.linalg.norm(soleil)
+        puissances = []
+        for h in range(24):
+            angle = math.radians(15 * (h - 12))
+            x = np.cos(lat) * np.cos(lon + angle)
+            y = np.cos(lat) * np.sin(lon + angle)
+            z = np.sin(lat)
+            normale = np.array([x, y, z])
+            puissances.append(max(0, S0 * np.dot(normale, soleil)))
+        return puissances
+
+    def chaque_jour(lat, lon):
+        return [puissance(lat, lon, j) for j in range(1, 366)]
+
+    def annee(P):
+        return [val for jour in P for val in jour]
+
+    def temp(P_recu):
+        c = 3e5
+        S = 1
+        T0 = 273
+        sigma = 5.67e-8
+        dt = 3600
+        A = 0.3
+        T = [T0]
+        for i in range(len(P_recu)):
+            flux_sortant = 0.5 * sigma * S * (T[i])**4
+            T.append(T[i] + dt * ((1 - A) * P_recu[i] * S - flux_sortant) / c)
+        return T
+
+    P = annee(chaque_jour(lat, lon))
+    T = temp(P)
+    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
+    fig, ax = plt.subplots()
+    ax.plot(dates, T)
+    ax.set_title("Modèle 4 — Température annuelle")
+    ax.set_xlabel("Temps")
+    ax.set_ylabel("Température (K)")
+    ax.grid(True)
+    return fig
+
+# =================== API Route =================== #
+@app.route("/run")
+def run():
+    model = int(request.args.get("model", 1))
+    lat = float(request.args.get("lat", 48.85))
+    lon = float(request.args.get("lon", 2.35))
+
+    if model == 1:
+        fig = run_model1()
+    elif model == 2:
+        fig = run_model2(lat, lon)
+    elif model == 3:
+        fig = run_model3(lat, lon)
+    elif model == 4:
+        fig = run_model4(lat, lon)
+    else:
+        return "Modèle inconnu", 400
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close(fig)
+    return send_file(buf, mimetype='image/png')
 
 if __name__ == "__main__":
-    os.makedirs("static", exist_ok=True)
     app.run(host="0.0.0.0", port=10000)
