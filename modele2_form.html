@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>modele2 - Choix de coordonnées</title>
+</head>
+<body>
+    <h1>modele2 - Génération de graphiques</h1>
+    <form action="/modele2" method="post">
+        <label for="lat">Latitude :</label>
+        <input type="number" step="any" name="lat" id="lat" required><br>
+        <label for="lon">Longitude :</label>
+        <input type="number" step="any" name="lon" id="lon" required><br>
+        <input type="submit" value="Générer les graphiques">
+    </form>
+
+    <h2>Graphique Annuel</h2>
+    <img src="/static/modele2_graph_annuel.png" width="100%">
+
+    <h2>Graphique Mensuel</h2>
+    <img src="/static/modele2_graph_mensuel.png" width="100%">
+
+    <h2>Graphique Journalier</h2>
+    <img src="/static/modele2_graph_journalier.png" width="100%">
+</body>
+</html>
