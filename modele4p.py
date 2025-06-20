@@ -9,6 +9,8 @@ def get_data(lat, lon):
     V = list(data["properties"]["parameter"]["WS10M"].values())
     P = [v if v is not None else 0 for v in P]
     V = [v if v is not None else 0 for v in V]
+    # Clamp des puissances pour éviter des valeurs irréalistes
+    P = [min(max(p, 0), 1500) for p in P]
     return P, V
 
 def temp(lat, lon):
@@ -19,7 +21,9 @@ def temp(lat, lon):
     A = 0.3
     dt = 3600
     S = 1
+    MAX_TEMP = 373  # Clamp température max à 100°C
     for i in range(len(P)):
-        flux_sortant = sigma * S * T[-1]**4
-        T.append(T[-1] + dt * ((1 - A) * P[i] - flux_sortant) / c)
+        T_last = min(T[-1], MAX_TEMP)
+        flux_sortant = sigma * S * T_last**4
+        T.append(T_last + dt * ((1 - A) * P[i] - flux_sortant) / c)
     return T
