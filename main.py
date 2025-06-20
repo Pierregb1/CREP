@@ -36,7 +36,7 @@ def load_temperature(module_name, lat=None, lon=None, zoomX=None):
                 last_exc = e
     raise RuntimeError(f"Impossible d'appeler une fonction temp-like dans {module_name}: {last_exc}")
 
-def run_model1(zoomX):
+def run_model1():
     try:
         T = load_temperature("modele1p", zoomX=zoomX)
         if not isinstance(T, (list, np.ndarray)):
