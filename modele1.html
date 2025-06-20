@@ -22,9 +22,6 @@
   <h1>Modèle 1 — Refroidissement</h1>
   <p>Ce modèle ne nécessite pas de latitude ou de longitude.</p>
   <form onsubmit="event.preventDefault(); afficherGraphique();">
-    <label for="zoomX">Zoom abscisses :</label>
-    <input type="range" id="zoomX" min="1" max="5" step="0.1" value="1">
-    <span id="zoom-val">1.0</span>
     <button type="submit">Afficher le graphique</button>
   </form>
 
@@ -38,22 +35,12 @@
   <script>
     function afficherGraphique() {
       const zoomX = document.getElementById('zoomX').value;
-      const url = `https://crep-online.onrender.com/run?model=1&zoomX=${zoomX}&t=${Date.now()}`;
+      const url = `https://crep-online.onrender.com/run?model=1`;
       const img = document.getElementById('imageGraphique');
       img.src = url;
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const zoomInput = document.getElementById('zoomX');
-      const zoomVal = document.getElementById('zoom-val');
-
-      zoomInput.addEventListener('input', () => {
-        zoomVal.textContent = zoomInput.value;
-        afficherGraphique();
-      });
-
-      afficherGraphique();
-    });
+      
   </script>
 </body>
 </html>
