@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Modèle 1 — Refroidissement</title>
+  <style>
+    #graphique-container {
+      width: 100%;
+      overflow: auto;
+      border: 1px solid #ccc;
+      height: auto;
+    }
+    #imageGraphique {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Modèle 1 — Refroidissement</h1>
+  <p>Ce modèle ne nécessite pas de latitude ou de longitude.</p>
+  <form onsubmit="event.preventDefault(); afficherGraphique();">
+    <label for="zoomX">Zoom abscisses :</label>
+    <input type="range" id="zoomX" min="1" max="5" step="0.1" value="1">
+    <span id="zoom-val">1.0</span>
+    <button type="submit">Afficher le graphique</button>
+  </form>
+
+  <div id="graphique">
+    <h3>Résultat :</h3>
+    <div id="graphique-container">
+      <img id="imageGraphique" src="" alt="Le graphique apparaîtra ici" />
+    </div>
+  </div>
+
+  <script>
+    function afficherGraphique() {
+      const zoomX = document.getElementById('zoomX').value;
+      const url = `https://crep-online.onrender.com/run?model=1&zoomX=${zoomX}&t=${Date.now()}`;
+      const img = document.getElementById('imageGraphique');
+      img.src = url;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const zoomInput = document.getElementById('zoomX');
+      const zoomVal = document.getElementById('zoom-val');
+
+      zoomInput.addEventListener('input', () => {
+        zoomVal.textContent = zoomInput.value;
+        afficherGraphique();
+      });
+
+      afficherGraphique();
+    });
+  </script>
+</body>
+</html>
