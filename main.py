@@ -8,34 +8,19 @@ import math
 app = Flask(__name__)
 
 # =================== Modèle 1 =================== #
-app.route("/run")
-def run_model():
-    model = request.args.get("model", "1")
-    zoomX = float(request.args.get("zoomX", 1.0))
-
+def run_model1(zoomX):
     fig, ax = plt.subplots()
+    time_max = 24 / zoomX
+    x = np.linspace(0, time_max, 1000)
+    y = 273 + 10 * np.exp(-x / 5)
+    ax.plot(x, y)
 
-    if model == "1":
-        # On modifie l’échelle de temps : plus de points, mais sur une durée plus courte si zoomX > 1
-        time_max = 24 / zoomX  # 24h divisées par le facteur de zoom
-        x = np.linspace(0, time_max, 1000)
-        y = 273 + 10 * np.exp(-x / 5)
-        ax.plot(x, y)
+    ax.set_title("Modèle 1 : Refroidissement")
+    ax.set_xlabel("Temps (heures)")
+    ax.set_ylabel("Température (K)")
+    ax.grid(True)
+    return fig
 
-        ax.set_title("Modèle 1 : Refroidissement")
-        ax.set_xlabel("Temps (heures)")
-        ax.set_ylabel("Température (K)")
-        ax.grid(True)
-
-    else:
-        ax.text(0.5, 0.5, f"Modèle {model} non pris en charge", ha='center', va='center')
-        ax.axis('off')
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight')
-    buf.seek(0)
-    plt.close(fig)
-    return send_file(buf, mimetype='image/png')
 # =================== Modèle 2 =================== #
 def run_model2(lat, lon):
     def puissance(lat, lon, jour):
@@ -190,11 +175,12 @@ def run_model4(lat, lon):
 @app.route("/run")
 def run():
     model = int(request.args.get("model", 1))
+    zoomX = float(request.args.get("zoomX", 1.0))
     lat = float(request.args.get("lat", 48.85))
     lon = float(request.args.get("lon", 2.35))
 
     if model == 1:
-        fig = run_model1()
+        fig = run_model1(zoomX)
     elif model == 2:
         fig = run_model2(lat, lon)
     elif model == 3:
@@ -205,7 +191,7 @@ def run():
         return "Modèle inconnu", 400
 
     buf = io.BytesIO()
-    plt.savefig(buf, format='png')
+    fig.savefig(buf, format='png')
     buf.seek(0)
     plt.close(fig)
     return send_file(buf, mimetype='image/png')
