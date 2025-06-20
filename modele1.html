@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Modèle 1 — Refroidissement</title>
+  <style>
+    #graphique-container {
+      width: 100%;
+      overflow: auto;
+      border: 1px solid #ccc;
+      height: auto;
+    }
+    #imageGraphique {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Modèle 1 — Refroidissement</h1>
+  <p>Ce modèle ne nécessite pas de latitude ou de longitude.</p>
+  <form onsubmit="event.preventDefault(); afficherGraphique();">
+    <button type="submit">Afficher le graphique</button>
+  </form>
+
+  <div id="graphique">
+    <h3>Résultat :</h3>
+    <div id="graphique-container">
+      <img id="imageGraphique" src="" alt="Le graphique apparaîtra ici" />
+    </div>
+  </div>
+
+  <script>
+    function afficherGraphique() {
+      const zoomX = document.getElementById('zoomX').value;
+      const url = `https://crep-online.onrender.com/run?model=1`;
+      const img = document.getElementById('imageGraphique');
+      img.src = url;
+    }
+
+      
+  </script>
+</body>
+</html>

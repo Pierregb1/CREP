@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Modèle 3 — Simulation annuelle</title>
+</head>
+<body>
+  <h1>Modèle 3 — Simulation annuelle</h1>
+  <form onsubmit="event.preventDefault(); afficherGraphique();">
+    <label for="lat">Latitude :</label>
+    <input type="number" id="lat" name="lat" step="0.01" value="48.85"><br><br>
+    <label for="lon">Longitude :</label>
+    <input type="number" id="lon" name="lon" step="0.01" value="2.35"><br><br>
+    <button type="submit">Afficher le graphique</button>
+    
+  </form>
+
+  <div id="graphique">
+    <h3>Résultat :</h3>
+    <img id="imageGraphique" src="" alt="Le graphique apparaîtra ici" style="max-width: 100%; border: 1px solid #ccc;"/>
+  </div>
+
+  
+
+  <script>
+    function afficherGraphique() {
+      const lat = document.getElementById('lat').value;
+      const lon = document.getElementById('lon').value;
+      const url = `https://crep-online.onrender.com/run?model=3&lat=${lat}&lon=${lon}`;
+      document.getElementById('imageGraphique').src = url;
+    }
+  </script>
+</body>
+</html>
