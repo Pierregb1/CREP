@@ -62,37 +62,47 @@ def temperature_evolution(P_recu, c):
 # =================== Modèle 2 et 4 identiques à avant (omises pour concision) =================== #
 
 # =================== Modèle 3 – 3 ZOOMS =================== #
-def run_model3(lat, lon):
-    """Retourne une figure avec 3 sous‑graphes : annuel, mensuel, journalier."""
+def run_model3(lat, lon, daily_date_str="2024-01-01"):
+    # Parsing de la date journalière demandée
+    try:
+        daily_date = datetime.date.fromisoformat(daily_date_str)
+    except ValueError:
+        daily_date = datetime.date(2024, 1, 1)  # défaut
+    if daily_date.year != 2024:
+        # on force l'année 2024 pour cohérence de l'échelle temps
+        daily_date = daily_date.replace(year=2024)
+
     P = sequence_annee(lat, lon)
     T = temperature_evolution(P, c=1.5e5)
     dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
 
-    # Indices pour découper
-    jour_heures = 24
-    mois_heures = 31 * 24  # janvier
+    # Indices utiles
+    day_index = daily_date.timetuple().tm_yday - 1
+    day_start = day_index * 24
+    day_end = day_start + 24
+
+    # Mois contenant la date choisie
+    month_start_day = day_index - daily_date.day + 1
+    days_in_month = calendar.monthrange(2024, daily_date.month)[1]
+    month_start = month_start_day * 24
+    month_end = month_start + days_in_month * 24
 
     fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharey=True)
 
     # Annuel
     axes[0].plot(dates, T)
     axes[0].set_title("Température annuelle")
-    axes[0].set_xlabel("")
-    axes[0].set_ylabel("T (K)")
     axes[0].grid(True)
 
-    # Mensuel : janvier
-    axes[1].plot(dates[:mois_heures], T[:mois_heures], color='tab:orange')
-    axes[1].set_title("Température – janvier")
-    axes[1].set_xlabel("")
-    axes[1].set_ylabel("T (K)")
+    # Mensuel (mois du daily_date)
+    axes[1].plot(dates[month_start:month_end], T[month_start:month_end], color='tab:orange')
+    axes[1].set_title(f"Température – {daily_date.strftime('%B')}")
     axes[1].grid(True)
 
-    # Journalier : 1ᵉʳ janvier
-    axes[2].plot(dates[:jour_heures], T[:jour_heures], color='tab:green')
-    axes[2].set_title("Température – 1ᵉʳ janvier")
-    axes[2].set_xlabel("Temps")
-    axes[2].set_ylabel("T (K)")
+    # Journalier
+    axes[2].plot(dates[day_start:day_end], T[day_start:day_end], color='tab:green')
+    axes[2].set_title(f"Température – {daily_date.strftime('%d %B')}")
+    axes[2].set_xlabel("Heure")
     axes[2].grid(True)
 
     fig.suptitle(f"Modèle 3 – Lat {lat:.2f}°, Lon {lon:.2f}°", fontsize=14)
