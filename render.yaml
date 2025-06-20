@@ -1,7 +1,7 @@
-
 services:
   - type: web
-    name: crep-online
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT main:app
+    name: simulation-temperature
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app --bind 0.0.0.0:$PORT"
