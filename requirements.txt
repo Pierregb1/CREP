@@ -2,3 +2,4 @@ flask
 matplotlib
 gunicorn
 requests
+numpy
