@@ -19,7 +19,7 @@ def temp(lat = 48.85, long = 2.35):
     rho = p_s.masse_volumique_point(long, lat)
     A = p_s.get_mean_albedo(lat, long)
     h = p_c.liste_h(lat,long)
-    alpha = f_c.calcul_alpha(5.67e-8*(288)**4)
+    alpha = f_c.calcul_alpha(5.67e-8*(288)**4, annee)
     print(alpha)
     d = 0.1 #10cm
     S = 1 #surface
@@ -39,10 +39,12 @@ def temp(lat = 48.85, long = 2.35):
 
 if __name__ == "__main__":
     # Simulation température
-    lat, long = 48.51, 2.20
+    lat = float(input("Indiquez la latitude du lieu : " ))
+    long = float(input("Indiquez la longitude du lieu : "))
+    annee = int(input("Indiquez l'année choisie : "))
     T_point = temp(lat, long)
     # ---------------------- Affichage ---------------------- #
-    date_debut = datetime.datetime(2024, 1, 1)
+    date_debut = datetime.datetime(annee, 1, 1)
     dates = [date_debut + datetime.timedelta(hours=i) for i in range(len(T_point))]
 
     fig, ax = plt.subplots(figsize=(14, 6))
