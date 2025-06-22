@@ -2,11 +2,19 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Modèle 1 — Refroidissement simple</title>
+  <meta charset="UTF-8">
+  <title>Modèle 1 — Refroidissement</title>
 </head>
 <body>
-    <h1>Modèle 1 : Refroidissement simple</h1>
-    <img src="/run?model=1" alt="Graphique du modèle 1">
+  <h1>Modèle 1 : Refroidissement simple</h1>
+  <button onclick="loadGraph()">Afficher le graphique</button>
+  <br><br>
+  <img id="graph" src="" style="max-width:100%;border:1px solid #ccc">
+
+  <script>
+    function loadGraph() {
+      document.getElementById("graph").src = "/run?model=1&t=" + Date.now();
+    }
+  </script>
 </body>
 </html>
