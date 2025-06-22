@@ -2,238 +2,81 @@
 from flask import Flask, request, send_file
 import matplotlib.pyplot as plt
 import numpy as np
-import io
-import datetime
-import math
+import importlib, inspect, io, datetime
 
 app = Flask(__name__)
 
-# =================== Modèle 1 =================== #
-def run_model1(zoomX):
-    fig, ax = plt.subplots()
-    time_max = 24 / zoomX
-    x = np.linspace(0, time_max, 1000)
-    y = 273 + 10 * np.exp(-x / 5)
-    ax.plot(x, y)
-
-    ax.set_title("Modèle 1 : Refroidissement")
-    ax.set_xlabel("Temps (heures)")
-    ax.set_ylabel("Température (K)")
-    ax.grid(True)
-    return fig
-
-# =================== Fonctions auxiliaires communes =================== #
-def puissance_jour(lat_deg, lon_deg, jour):
-    """Flux horaire reçu sur une journée (24 valeurs)"""
-    S0 = 1361  # constante solaire W/m²
-    lat = math.radians(lat_deg)
-    lon = math.radians(lon_deg)
-    inclinaison = math.radians(23.5)
-    declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
-    # direction vecteur Soleil (approx)
-    soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
-    soleil /= np.linalg.norm(soleil)
-    puissances = []
-    for h in range(24):
-        angle = math.radians(15 * (h - 12))  # angle horaire
-        x = np.cos(lat) * np.cos(lon + angle)
-        y = np.cos(lat) * np.sin(lon + angle)
-        z = np.sin(lat)
-        normale = np.array([x, y, z])
-        puissances.append(max(0, S0 * np.dot(normale, soleil)))
-    return puissances
-
-def sequence_annee(lat, lon):
-    """Retourne la liste des 8760 flux horaires pour l'année"""
-    return [val for jour in range(1, 366) for val in puissance_jour(lat, lon, jour)]
-
-def temperature_evolution(P_recu, c):
-    S = 1          # surface élémentaire m²
-    T0 = 273       # K
-    sigma = 5.67e-8
-    dt = 3600      # pas 1 h
-    A = 0.3        # albédo
-    T = [T0]
-    for p in P_recu:
-        flux_sortant = 0.5 * sigma * S * (T[-1] ** 4)
-        T.append(T[-1] + dt * ((1 - A) * p * S - flux_sortant) / c)
-    return T[1:]  # on enlève T0 initial
-
-# =================== Modèle 2 et 4 identiques à avant (omises pour concision) =================== #
-
-# =================== Modèle 3 – 3 ZOOMS =================== #
-def run_model3(lat, lon, daily_date_str="2024-01-01"):
-    # Parsing de la date journalière demandée
-    try:
-        daily_date = datetime.date.fromisoformat(daily_date_str)
-    except ValueError:
-        daily_date = datetime.date(2024, 1, 1)  # défaut
-    if daily_date.year != 2024:
-        # on force l'année 2024 pour cohérence de l'échelle temps
-        daily_date = daily_date.replace(year=2024)
-
-    P = sequence_annee(lat, lon)
-    T = temperature_evolution(P, c=1.5e5)
-    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-
-    # Indices utiles
-    day_index = daily_date.timetuple().tm_yday - 1
-    day_start = day_index * 24
-    day_end = day_start + 24
-
-    # Mois contenant la date choisie
-    month_start_day = day_index - daily_date.day + 1
-    days_in_month = calendar.monthrange(2024, daily_date.month)[1]
-    month_start = month_start_day * 24
-    month_end = month_start + days_in_month * 24
-
+def compose_triple_view(dates, T, title):
     fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharey=True)
+    axes[0].plot(dates, T); axes[0].set_title(f"{title} — annuel"); axes[0].grid(True)
+    axes[1].plot(dates[:31*24], T[:31*24], color='tab:orange'); axes[1].set_title("Janvier"); axes[1].grid(True)
+    axes[2].plot(dates[:24], T[:24], color='tab:green'); axes[2].set_title("1ᵉʳ janvier"); axes[2].set_xlabel("Heure"); axes[2].grid(True)
+    fig.tight_layout(); return fig
 
-    # Annuel
-    axes[0].plot(dates, T)
-    axes[0].set_title("Température annuelle")
-    axes[0].grid(True)
+def call_function_adaptively(fn, *args):
+    """Appelle fn avec un nombre d'arguments correspondant à sa signature."""
+    sig = inspect.signature(fn)
+    params = [p for p in sig.parameters.values() if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
+    needed = len([p for p in params if p.default is inspect._empty])
+    # slice args pour respecter needed
+    return fn(*args[:needed])
 
-    # Mensuel (mois du daily_date)
-    axes[1].plot(dates[month_start:month_end], T[month_start:month_end], color='tab:orange')
-    axes[1].set_title(f"Température – {daily_date.strftime('%B')}")
-    axes[1].grid(True)
+def load_temperature(module_name, lat=None, lon=None, zoomX=None):
+    mod = importlib.import_module(module_name)
+    for name in ("temp", "run", "simulate", "compute", "temperature"):
+        fn = getattr(mod, name, None)
+        if callable(fn):
+            # Essayer d'appeler avec différents combos
+            try:
+                if zoomX is not None:
+                    return call_function_adaptively(fn, zoomX)
+                else:
+                    return call_function_adaptively(fn, lat, lon)
+            except Exception as e:
+                last_exc = e
+    raise RuntimeError(f"Impossible d'appeler une fonction temp-like dans {module_name}: {last_exc}")
 
-    # Journalier
-    axes[2].plot(dates[day_start:day_end], T[day_start:day_end], color='tab:green')
-    axes[2].set_title(f"Température – {daily_date.strftime('%d %B')}")
-    axes[2].set_xlabel("Heure")
-    axes[2].grid(True)
+def run_model1():
+    try:
+        T = load_temperature("modele1p", zoomX=zoomX)
+        if not isinstance(T, (list, np.ndarray)):
+            raise ValueError("modele1p.temp doit renvoyer une liste/ndarray")
+        x = np.linspace(0, 24/zoomX, len(T))
+        fig, ax = plt.subplots(); ax.plot(x, T)
+        ax.set_title("Modèle 1"); ax.set_xlabel("Heure"); ax.set_ylabel("T (K)"); ax.grid(True)
+        return fig
+    except Exception as e:
+        fig, ax = plt.subplots(); ax.text(0.5,0.5,str(e),ha='center',va='center'); ax.axis('off'); return fig
 
-    fig.suptitle(f"Modèle 3 – Lat {lat:.2f}°, Lon {lon:.2f}°", fontsize=14)
-    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
-    return fig
+def run_generic(model, lat, lon):
+    module_name = f"modele{model}p"
+    try:
+        T = load_temperature(module_name, lat, lon)
+        # si retourne tuple (dates, T) déjà
+        if isinstance(T, tuple) and len(T) == 2:
+            dates, temp = T
+            return compose_triple_view(dates, temp, f"Modèle {model}")
+        if len(T) == 8761:
+            T = T[1:]
+        dates = [datetime.datetime(2024,1,1)+datetime.timedelta(hours=i) for i in range(len(T))]
+        return compose_triple_view(dates, T, f"Modèle {model}")
+    except Exception as e:
+        fig, ax = plt.subplots(); ax.text(0.5,0.5,str(e),ha='center',va='center'); ax.axis('off'); return fig
 
-# =================== Modèle 2 =================== #
-def run_model2(lat, lon):
-    def puissance(lat, lon, jour):
-        S0 = 1361
-        lat = math.radians(lat)
-        lon = math.radians(lon)
-        inclinaison = math.radians(23.5)
-        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
-        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
-        soleil /= np.linalg.norm(soleil)
-        puissances = []
-        for h in range(24):
-            angle = math.radians(15 * (h - 12))
-            x = np.cos(lat) * np.cos(lon + angle)
-            y = np.cos(lat) * np.sin(lon + angle)
-            z = np.sin(lat)
-            normale = np.array([x, y, z])
-            puissances.append(max(0, S0 * np.dot(normale, soleil)))
-        return puissances
-
-    def chaque_jour(lat, lon):
-        return [puissance(lat, lon, j) for j in range(1, 366)]
-
-    def annee(P):
-        return [val for jour in P for val in jour]
-
-    def temp(P_recu):
-        c = 2.25e5
-        S = 1
-        T0 = 273
-        sigma = 5.67e-8
-        dt = 3600
-        A = 0.3
-        T = [T0]
-        for i in range(len(P_recu)):
-            flux_sortant = 0.5 * sigma * S * (T[i])**4
-            T.append(T[i] + dt * ((1 - A) * P_recu[i] * S - flux_sortant) / c)
-        return T
-
-    P = annee(chaque_jour(lat, lon))
-    T = temp(P)
-    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    ax.set_title("Modèle 2 — Température annuelle")
-    ax.set_xlabel("Temps")
-    ax.set_ylabel("Température (K)")
-    ax.grid(True)
-    return fig
-
-# =================== Modèle 4 =================== #
-def run_model4(lat, lon):
-    def puissance(lat, lon, jour):
-        S0 = 1361
-        lat = math.radians(lat)
-        lon = math.radians(lon)
-        inclinaison = math.radians(23.5)
-        declinaison = np.arcsin(np.sin(inclinaison) * np.sin(2 * math.pi * (jour - 81) / 365))
-        soleil = np.array([np.cos(declinaison), 0, np.sin(declinaison)])
-        soleil /= np.linalg.norm(soleil)
-        puissances = []
-        for h in range(24):
-            angle = math.radians(15 * (h - 12))
-            x = np.cos(lat) * np.cos(lon + angle)
-            y = np.cos(lat) * np.sin(lon + angle)
-            z = np.sin(lat)
-            normale = np.array([x, y, z])
-            puissances.append(max(0, S0 * np.dot(normale, soleil)))
-        return puissances
-
-    def chaque_jour(lat, lon):
-        return [puissance(lat, lon, j) for j in range(1, 366)]
-
-    def annee(P):
-        return [val for jour in P for val in jour]
-
-    def temp(P_recu):
-        c = 3e5
-        S = 1
-        T0 = 273
-        sigma = 5.67e-8
-        dt = 3600
-        A = 0.3
-        T = [T0]
-        for i in range(len(P_recu)):
-            flux_sortant = 0.5 * sigma * S * (T[i])**4
-            T.append(T[i] + dt * ((1 - A) * P_recu[i] * S - flux_sortant) / c)
-        return T
-
-    P = annee(chaque_jour(lat, lon))
-    T = temp(P)
-    dates = [datetime.datetime(2024, 1, 1) + datetime.timedelta(hours=i) for i in range(len(T))]
-    fig, ax = plt.subplots()
-    ax.plot(dates, T)
-    ax.set_title("Modèle 4 — Température annuelle")
-    ax.set_xlabel("Temps")
-    ax.set_ylabel("Température (K)")
-    ax.grid(True)
-    return fig
-
-
-# =================== API Route =================== #
 @app.route("/run")
 def run():
-    model = int(request.args.get("model", 1))
-    zoomX = float(request.args.get("zoomX", 1.0))
-    lat = float(request.args.get("lat", 48.85))
-    lon = float(request.args.get("lon", 2.35))
-
+    model = int(request.args.get("model",1))
+    lat   = float(request.args.get("lat",48.85))
+    lon   = float(request.args.get("lon",2.35))
+    zoomX = float(request.args.get("zoomX",1.0))
     if model == 1:
         fig = run_model1(zoomX)
-    elif model == 2:
-        fig = run_model2(lat, lon)
-    elif model == 3:
-        fig = run_model3(lat, lon)
-    elif model == 4:
-        fig = run_model4(lat, lon)
+    elif model in (2,3,4,5):
+        fig = run_generic(model, lat, lon)
     else:
         return "Modèle inconnu", 400
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close(fig)
-    return send_file(buf, mimetype='image/png')
+    buf=io.BytesIO(); fig.savefig(buf,format="png"); buf.seek(0)
+    return send_file(buf,mimetype="image/png")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host="0.0.0.0",port=10000)

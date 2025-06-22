@@ -1,3 +1,7 @@
 flask
 matplotlib
 gunicorn
+requests
+numpy
+shapely
+basemap
