@@ -36,17 +36,22 @@ def load_temperature(module_name, lat=None, lon=None, zoomX=None):
                 last_exc = e
     raise RuntimeError(f"Impossible d'appeler une fonction temp-like dans {module_name}: {last_exc}")
 
-def run_model1():
+def run_model1(zoomX):
     try:
         T = load_temperature("modele1p", zoomX=zoomX)
         if not isinstance(T, (list, np.ndarray)):
             raise ValueError("modele1p.temp doit renvoyer une liste/ndarray")
-        x = np.linspace(0, 24/zoomX, len(T))
+        x = np.linspace(0, 24, len(T))  # <-- correction ici : on ignore zoomX
         fig, ax = plt.subplots(); ax.plot(x, T)
-        ax.set_title("Modèle 1"); ax.set_xlabel("Heure"); ax.set_ylabel("T (K)"); ax.grid(True)
+        ax.set_title("Modèle 1 — Refroidissement simple")
+        ax.set_xlabel("Heure"); ax.set_ylabel("Température (K)")
+        ax.grid(True)
         return fig
     except Exception as e:
-        fig, ax = plt.subplots(); ax.text(0.5,0.5,str(e),ha='center',va='center'); ax.axis('off'); return fig
+        fig, ax = plt.subplots(); ax.text(0.5, 0.5, str(e), ha='center', va='center')
+        ax.axis('off')
+        return fig
+
 
 def run_generic(model, lat, lon):
     module_name = f"modele{model}p"
