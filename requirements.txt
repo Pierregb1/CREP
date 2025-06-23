@@ -5,3 +5,6 @@ numpy
 requests
 shapely
 basemap
+basemap_data
+pyproj
+pyshp
