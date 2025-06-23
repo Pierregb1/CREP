@@ -3,3 +3,5 @@ matplotlib
 gunicorn
 numpy
 requests
+shapely
+basemap

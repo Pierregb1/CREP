@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import io, importlib, datetime
 import sys
+import traceback
 
 app = Flask(__name__)  # Indispensable pour gunicorn
 
@@ -63,6 +64,7 @@ def run():
         buf.seek(0)
         return send_file(buf, mimetype="image/png")
     except Exception as e:
+        print(traceback.format_exc())
         return f"Erreur : {e}", 500
 
 if __name__ == "__main__":
