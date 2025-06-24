@@ -20,9 +20,9 @@ Il peut être nécessaire d'installer sur Python les librairies suivantes :
 <details>
   <summary><strong>Comment utiliser notre code ?</strong></summary>
 
-Dans un premier temps, il faut exécuter le fichier MAIN.py, situé dans le dossier "modèle 6". Dans la console, trois questions successives apparaissent, demandant de renseigner la latitude, longitude du point choisi, et l'année d'étude. Ce code, en s'appuyant sur les fichiers 'parametrage_convection.py', 'parametrage_surface.py' et 'librairies_puissances'.
+Dans un premier temps, il faut exécuter le fichier MAIN.py, situé dans le dossier "modèle 6". Dans la console, trois questions successives apparaissent, demandant de renseigner la latitude, longitude du point choisi, et l'année d'étude. Ce code, en s'appuyant sur les fichiers `parametrage_convection.py`, `parametrage_surface.py` et `librairies_puissances`.
 
-👉 Voici un exemple pour la ville de Paris (48.85°N, 2.05°E) en 2024 :
+Voici un exemple pour la ville de Paris (48.85°N, 2.05°E) en 2024 :
 <img src="exemple.png" alt="Exemple : Paris" width="400"/>
 
 </details>
