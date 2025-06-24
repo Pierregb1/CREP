@@ -4,6 +4,8 @@ Created on Fri Jun 13 16:21:27 2025
 
 @author: danab
 """
+
+import matplotlib.pyplot as plt
 import numpy as np
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -12,10 +14,11 @@ import numpy as np
 # BLACKBODY RADIATION
 # ===================
 
+# Calcule la luminance spectrale émise par un corps noir à la température T pour chaque longueur d'onde
 def planck_function(lambda_wavelength, T):
-    h = 6.62607015e-34      # Planck's constant, J*s
-    c = 2.998e8             # Speed of light, m/s
-    kB = 1.380649e-23       # Boltzmann's constant, J/K
+    h = 6.62607015e-34      # Constante de Planck, J*s
+    c = 2.998e8             # Vitesse de la lumière, m/s
+    kB = 1.380649e-23       # Constante de Boltzmann, J/K
     term1 = (2 * h * c**2) / lambda_wavelength**5
     term2 = np.exp((h * c) / (lambda_wavelength * kB * T)) - 1
     return term1 / term2
@@ -26,52 +29,56 @@ def planck_function(lambda_wavelength, T):
 # ATMOSPHERE MODEL
 # ================
 
+# Calcule la pression atmosphérique à une altitude z selon un modèle exponentiel (modèle barométrique isotherme)
 def pressure(z):
-    P0 = 101325     # Pressure at sea level in Pa
-    H = 8500        # Scale height in m
+    P0 = 101325     # Pression au niveau de la mer en Pa
+    H = 8500        # Hauteur de l’échelle en m
     return P0 * np.exp(-z / H)
 
+# Température constante (modèle simplifié)
 def temperature_uniform(z):
     T0 = 288.2
     return T0 * np.ones_like(z)
 
+# Décroissance linéaire jusqu’à la tropopause (11 km), puis constante
 def temperature_simple(z):
-    T0 = 288.2     # Temperature at sea level in K
-    z_trop = 11000  # Tropopause height in m
-    Gamma = -0.0065 # Temperature gradient in K/m
+    T0 = 288.2     # Température au niveau de la mer en K
+    z_trop = 11000  # Hauteur de la tropopause en m
+    Gamma = -0.0065 # Gradient de température en K/m
     T_trop = T0 + Gamma * z_trop
     return np.piecewise(z, [z < z_trop, z >= z_trop],
                         [lambda z: T0 + Gamma * z,
                          lambda z: T_trop])
 
+# Modèle réaliste par couches, inspiré de l’atmosphère standard 1976
 def temperature_US1976(z):
-    z_km = z/1000  # Convert altitude to km for easier comparisons
+    z_km = z/1000  # Convertir l'altitude en km pour faciliter les comparaisons
 
-    # Troposphere (0 to 11 km)
+    # Troposphère (0 à 11 km)
     T0 = 288.15
     z_trop = 11
 
-    # Tropopause (11 to 20 km)
+    # Tropopause (11 à 20 km)
     T_tropopause = 216.65
     z_tropopause = 20
 
-    # Stratosphere 1 (20 to 32 km)
+    # Stratosphère 1 (20 à 32 km)
     T_strat1 = T_tropopause
     z_strat1 = 32
 
-    # Stratosphere 2 (32 to 47 km)
+    # Stratosphère 2 (32 à 47 km)
     T_strat2 = 228.65
     z_strat2 = 47
 
-    # Stratopause (47 to 51 km)
+    # Stratopause (47 à 51 km)
     T_stratopause = 270.65
     z_stratopause = 51
 
-    # Mesosphere 1 (51 to 71 km)
+    # Mésosphère 1 (51 à 71 km)
     T_meso1 = T_stratopause
     z_meso1 = 71
 
-    # Mesosphere 2 (71 to ...)
+    # Mésosphère 2 (au-delà de 71 km)
     T_meso2 = 214.65
 
     return np.piecewise(z_km,
@@ -90,26 +97,27 @@ def temperature_US1976(z):
                          lambda z: T_meso1 - 2.8 * (z - z_stratopause),
                          lambda z: T_meso2 - 2 * (z - z_meso1)])
 
-
-# ==> CHOOSE HERE THE TEMPERATURE MODEL
+# ==> CHOISIR ICI LE MODÈLE DE TEMPÉRATURE À UTILISER
 def temperature(z):
     return temperature_simple(z)
 
+# Calcule la densité moléculaire de l’air (nombre de molécules par m³) via l’équation des gaz parfaits
 def air_number_density(z):
-    kB = 1.380649e-23  # Boltzmann's constant, J/K
+    kB = 1.380649e-23  # Constante de Boltzmann, J/K
     return pressure(z) / (kB * temperature(z))
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-# ==============
+# ================
 # CO2 ABSORPTION
-# ==============
+# ================
 
+# Modèle simplifié de l'absorption infrarouge du CO₂ autour de la longueur d’onde de 15 μm
 def cross_section_CO2(wavelength):
-    LAMBDA_0 = 15.0e-6  # Band center in m
-    exponent = -22.5 - 24 * np.abs((wavelength - LAMBDA_0) / LAMBDA_0)
-    sigma = 10 ** exponent
-    return sigma
+    LAMBDA_0 = 15.0e-6  # Centre de la bande d’absorption infrarouge principale du CO₂ (en m)
+    exponent = -22.5 - 24 * np.abs((wavelength - LAMBDA_0) / LAMBDA_0)  # Exposant décroissant avec l’écart à la bande centrale
+    sigma = 10 ** exponent  # Convertit l’exposant en valeur réelle (section efficace)
+    return sigma  # Renvoie les sections efficaces d’absorption (en m²/molécule)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -117,38 +125,41 @@ def cross_section_CO2(wavelength):
 # RADIATIVE TRANSFER SIMULATION
 # =============================
 
-# All wavelengths are treated in parallel using vectorization
+# Toutes les longueurs d’onde sont traitées en parallèle grâce à la vectorisation
 
+# Simule le transfert du rayonnement infrarouge émis par la Terre vers le sommet de l’atmosphère
 def simulate_radiative_transfer(CO2_fraction, z_max = 80000, delta_z = 10, lambda_min = 0.1e-6, lambda_max = 100e-6, delta_lambda = 0.01e-6):
 
-    # Altitude and wavelength grids
+    # Grilles d’altitude et de longueur d’onde
     z_range = np.arange(0, z_max, delta_z)
     lambda_range = np.arange(lambda_min, lambda_max, delta_lambda)
 
-    # Initialize arrays
+    # Initialisation des tableaux
     upward_flux = np.zeros((len(z_range), len(lambda_range)))
     optical_thickness = np.zeros((len(z_range), len(lambda_range)))
 
-    # Boundary condition : Compute the outward vertical flux emitted by the Earth's surface for all wavelengths
+    # Condition aux limites : calcul du flux vertical émis par la surface terrestre pour chaque longueur d’onde
     earth_flux = np.pi * planck_function(lambda_range, temperature(0)) * delta_lambda
-    #print(f"Total earth surface flux in wavelength range: {earth_flux.sum():.2f} W/m^2")
+    print(f"Total earth surface flux in wavelength range: {earth_flux.sum():.2f} W/m^2")
 
     flux_in = earth_flux
     for i, z in enumerate(z_range):
-
-        # Number density of CO2 molecules and absorption coefficient
+        # Pour chaque couche de l'atmosphère :
+        # Densité de molécules de CO2
         n_CO2 = air_number_density(z) * CO2_fraction
+
+        # Coefficient d’absorption (en 1/m)
         kappa = cross_section_CO2(lambda_range) * n_CO2
 
-        # Compute fluxes within the layer
+        # Calcul des flux dans la couche
         optical_thickness[i,:] = kappa * delta_z
         absorbed_flux = np.minimum(kappa * delta_z * flux_in , flux_in)
         emitted_flux = optical_thickness[i,:] * np.pi * planck_function(lambda_range, temperature(z)) * delta_lambda
         upward_flux[i, :] = flux_in - absorbed_flux + emitted_flux
 
-        # The flux leaving the layer becomes the flux entering the next layer
+        # Le flux sortant de la couche devient le flux incident sur la suivante
         flux_in = upward_flux[i, :]
 
-    #print(f"Total outgoing flux at the top of the atmosphere: {upward_flux[-1,:].sum():.2f} W/m^2")
+    print(f"Total outgoing flux at the top of the atmosphere: {upward_flux[-1,:].sum():.2f} W/m^2")
 
     return lambda_range, z_range, upward_flux, optical_thickness, earth_flux
