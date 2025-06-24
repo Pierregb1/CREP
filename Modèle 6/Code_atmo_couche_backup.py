@@ -138,7 +138,7 @@ def simulate_radiative_transfer(CO2_fraction, z_max = 80000, delta_z = 10, lambd
 
     # Condition aux limites : calcul du flux vertical émis par la surface terrestre pour chaque longueur d’onde
     earth_flux = np.pi * planck_function(lambda_range, temperature(0)) * delta_lambda
-    print(f"Total earth surface flux in wavelength range: {earth_flux.sum():.2f} W/m^2")
+    #print(f"Total earth surface flux in wavelength range: {earth_flux.sum():.2f} W/m^2")
 
     flux_in = earth_flux
     for i, z in enumerate(z_range):
@@ -158,6 +158,6 @@ def simulate_radiative_transfer(CO2_fraction, z_max = 80000, delta_z = 10, lambd
         # Le flux sortant de la couche devient le flux incident sur la suivante
         flux_in = upward_flux[i, :]
 
-    print(f"Total outgoing flux at the top of the atmosphere: {upward_flux[-1,:].sum():.2f} W/m^2")
+   # print(f"Total outgoing flux at the top of the atmosphere: {upward_flux[-1,:].sum():.2f} W/m^2")
 
     return lambda_range, z_range, upward_flux, optical_thickness, earth_flux

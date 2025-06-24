@@ -8,8 +8,8 @@ import datetime
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import librairie_puissances as l_p
-import parametres_surface as p_s
-import parametre_convection as p_c
+import parametrage_surface as p_s
+import parametrage_convection as p_c
 import fonction_calcul_alpha as f_c
 
 
@@ -20,7 +20,6 @@ def temp(lat = 48.85, long = 2.35):
     A = p_s.get_mean_albedo(lat, long)
     h = p_c.liste_h(lat,long)
     alpha = f_c.calcul_alpha(5.67e-8*(288)**4, annee)
-    print(alpha)
     d = 0.1 #10cm
     S = 1 #surface
     c = cm*rho*S*d
