@@ -1,8 +1,8 @@
-### Les chevreaux brillants
+### Projet CREP
 
 ***
 
-| Projet CREP |
+| Les chevreaux brillants |
 |-------------|
 
 <details>
