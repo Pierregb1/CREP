@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+"# -*- coding: utf-8 -*-
 """
 Created on Fri Jun 13 16:21:27 2025
 
@@ -160,39 +160,4 @@ def simulate_radiative_transfer(CO2_fraction, z_max = 80000, delta_z = 10, lambd
 
     print(f"Total outgoing flux at the top of the atmosphere: {upward_flux[-1,:].sum():.2f} W/m^2")
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     return lambda_range, z_range, upward_flux, optical_thickness, earth_flux
-
-#----------------------------------------------------------------------------------------------------------------------
-
-#MAIN
- 
-CO2_fraction = 415.6e-6
-lambda_range, z_range, upward_flux, optical_thickness = simulate_radiative_transfer(CO2_fraction)
-CO2_fraction = 815e-6
-lambda_range, z_range, upward_flux2, optical_thickness2 = simulate_radiative_transfer(CO2_fraction)
-
-# Plot top of atmosphere spectrum
-plt.figure(figsize=(14, 9))
-# Superimpose blackbody spectrum at Earth's surface temperature and 220K
-plt.plot(1e6 * lambda_range, np.pi * planck_function(lambda_range, temperature(0))/1e6,'--k')
-plt.plot(1e6 * lambda_range, np.pi * planck_function(lambda_range, 216)/1e6,'--k')
-
-delta_lambda = lambda_range[1] - lambda_range[0]
-plt.plot(1e6 * lambda_range, upward_flux[-1, :]/delta_lambda/1e6,'-g')
-plt.plot(1e6 * lambda_range, upward_flux2[-1, :]/delta_lambda/1e6,'-r')
-plt.fill_between(1e6 * lambda_range, upward_flux[-1, :]/delta_lambda/1e6, upward_flux2[-1, :]/delta_lambda/1e6, color='yellow', alpha=0.9)
-plt.xlabel("Longueur d'onde (μm)")
-plt.ylabel("Luminance spectrale (W/m²/μm/sr)")
-plt.xlim(0, 50)
-plt.ylim(0, 30)
-plt.grid(True)
-plt.show()
-#----------------------------------------------------------------------------------------------------------------------
-=======
-    return lambda_range, z_range, upward_flux, optical_thickness, earth_flux
->>>>>>> dfb3cf894a55205a9c3b7edb316a37680abcc5fb
-=======
-    return lambda_range, z_range, upward_flux, optical_thickness, earth_flux
->>>>>>> 63930814a6f8ce10a0d832fd85bbde5c5f03007d
