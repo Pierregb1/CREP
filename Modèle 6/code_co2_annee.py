@@ -4,14 +4,11 @@ Created on Fri Jun 20 15:19:59 2025
 
 @author: jeann
 """
-
-import matplotlib.pyplot as plt
  
 # Listes pour stocker les données
 taux_CO2 = []
 annees = []
- 
- 
+  
 def calcul_CO2(annee):
     a = 1.9
     b = -3430

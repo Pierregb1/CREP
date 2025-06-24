@@ -4,8 +4,6 @@ Created on Fri Jun 13 16:21:27 2025
 
 @author: danab
 """
-
-import matplotlib.pyplot as plt
 import numpy as np
 
 # ----------------------------------------------------------------------------------------------------------------------
