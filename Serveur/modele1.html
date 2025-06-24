@@ -1,0 +1,10 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Modèle 1</title></head><body>
+<h1>Modèle 1 : Refroidissement simple</h1>
+<button onclick="loadGraph()">Afficher le graphique</button><br><br>
+<img id="graph" style="max-width:100%;border:1px solid #ccc">
+<script>
+const HOST = "https://crep-online.onrender.com";
+function loadGraph() {
+  document.getElementById("graph").src = HOST + "/run?model=1&t=" + Date.now();
+}
+</script></body></html>

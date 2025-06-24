@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Modèle 3</title></head><body>
+<h1>Modèle 3</h1>
+<form onsubmit="event.preventDefault(); afficherGraphique();">
+
+  <label>Latitude: <input type="number" id="lat" value="48.85" step="0.01"></label><br>
+  <label>Longitude: <input type="number" id="lon" value="2.35" step="0.01"></label><br>
+  <button type="submit">Afficher le graphique</button>
+</form>
+<img id="graph" style="max-width:100%;border:1px solid #ccc">
+<script>
+const HOST = "https://crep-online.onrender.com";
+function afficherGraphique() {
+  const lat = document.getElementById("lat").value;
+  const lon = document.getElementById("lon").value;
+  document.getElementById("graph").src = `${HOST}/run?model=3&lat=${lat}&lon=${lon}&t=${Date.now()}`;
+}
+</script></body></html>
