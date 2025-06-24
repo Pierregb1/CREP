@@ -28,10 +28,5 @@
 
 * <details>
   <summary>Pistes pour l'année prochaine :</summary>
-  Il est clair que certaines puissances cédées par la Terre, et non négligeables, n'ont pas été modélisées par notre groupe. Parmi ces dernières, on retrouve notamment l'évapo-transpiration : nous avons effectué des recherches mais nous ne les avons pas intégré dans le code. 
-    
-<kbd>[A retrouver ici](https://github.com/Pierregb1/CREP/blob/main/Pistes%20futures/Mode%CC%80le_e%CC%81vapotranspiration.pdf)</kbd>
-    
+  Il est clair que certaines puissances cédées par la Terre, et non négligeables, n'ont pas été modélisées par notre groupe. Parmi ces dernières, on retrouve notamment l'évapo-transpiration : nous avons effectué des recherches mais nous ne les avons pas intégré dans le code. <kbd>[A retrouver ici](https://github.com/Pierregb1/CREP/blob/main/Pistes%20futures/Mode%CC%80le_e%CC%81vapotranspiration.pdf)</kbd>
 </details>
-
-***
